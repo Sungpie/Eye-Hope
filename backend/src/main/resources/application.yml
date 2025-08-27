@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: News App
+  devtools:
+    restart:
+      enabled: true
+      additional-exclude: static/**, public/**
+    livereload:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://dev-eyehope-rds.cnwkwykymx0o.ap-northeast-2.rds.amazonaws.com:5432/eyehope
+    username: projecth1206
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      data-source-properties:
+        ssl: true
+        sslmode: require
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
