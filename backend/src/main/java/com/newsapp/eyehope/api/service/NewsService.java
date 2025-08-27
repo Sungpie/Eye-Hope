@@ -76,7 +76,9 @@ public class NewsService {
      */
     private String summarizeNewsContent(String url, String title) {
         String prompt = String.format(
-            "다음 뉴스 기사 URL을 분석하고 내용을 요약해주세요. 요약은 한국어로 작성하고, 3-4문장 정도로 간결하게 작성해주세요. " +
+            "다음 뉴스 기사 URL을 분석하고 내용을 요약해주세요. 요약은 한국어로 작성하고, 3-4문장 정도로 간결하게 작성해주세요."+
+                    "절대 다른 말을 추가하지 말고 요약만 출력하세요.\n" +
+                    " '알겠습니다', '요약:', '**' 같은 표현 금지."+
             "고유명사/수치/날짜 를 유지해주세요. 과장, 의견, 추측 금지 (본문에 없는 내용 금지). 문장을 짧게, 청각 사용자(TTS) 친화적으로 작성. URL: %s, 제목: %s",
             url, title
         );
@@ -92,6 +94,7 @@ public class NewsService {
         collectAllNews();
         return "뉴스 수집이 완료되었습니다.";
     }
+
 
     /**
      * 모든 뉴스 조회

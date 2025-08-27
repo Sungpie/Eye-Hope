@@ -1,12 +1,6 @@
 spring:
   application:
     name: News App
-  devtools:
-    restart:
-      enabled: true
-      additional-exclude: static/**, public/**
-    livereload:
-      enabled: true
   datasource:
     url: jdbc:postgresql://dev-eyehope-rds.cnwkwykymx0o.ap-northeast-2.rds.amazonaws.com:5432/postgres
     username: projecth1206
@@ -29,6 +23,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
 # Gemini API Configuration
 gemini:
