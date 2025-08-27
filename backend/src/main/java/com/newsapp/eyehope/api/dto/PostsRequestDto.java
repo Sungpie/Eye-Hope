@@ -19,7 +19,7 @@ public class PostsRequestDto {
     private String content;
     private String source;
     private String url;
-    private LocalDateTime created_at;
+    private LocalDateTime createdAt;
     private Long newsId;
 
 
@@ -29,8 +29,8 @@ public class PostsRequestDto {
         entity.setContent(content);
         entity.setSource(source);
         entity.setUrl(url);
-        entity.setCreated_at(created_at);
-        entity.setCollected_at(LocalDateTime.now()); // 현재 시간으로 collected_at 설정
+        entity.setCreatedAt(createdAt);
+        entity.setCollectedAt(LocalDateTime.now()); // 현재 시간으로 collected_at 설정
 
         // newsId 설정
         if (newsId != null) {

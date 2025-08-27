@@ -101,7 +101,7 @@ public class RssFeedService {
                     .source(feedInfo.getSource())  // 언론사 이름 (press 테이블의 name)
                     .title(cleanText(entry.getTitle()))  // 제목
                     .content(extractDescription(entry))  // 내용 (RSS의 description)
-                    .created_at(convertToLocalDateTime(entry.getPublishedDate()))  // 발행시간을 LocalDateTime으로
+                    .createdAt(convertToLocalDateTime(entry.getPublishedDate()))  // 발행시간을 LocalDateTime으로
                     .url(entry.getLink())  // 기사 URL
                     .newsId(newsId)  // News 테이블 ID 설정
                     .build();

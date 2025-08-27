@@ -108,12 +108,65 @@ public class NewsService {
 
     /**
      * 최신 뉴스 조회
-
+     */
     public List<PostsResponseDto> getLatestNews(int limit) {
-        PageRequest pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "collected_at"));
+        PageRequest pageRequest = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "collectedAt"));
         List<Posts> posts = postsRepository.findAll(pageRequest).getContent();
         return posts.stream()
                 .map(PostsResponseDto::new)
                 .collect(Collectors.toList());
-    }*/
+    }
+
+    /**
+     * 카테고리별 뉴스 조회
+     */
+    public List<PostsResponseDto> getNewsByCategory(String category, int page, int size) {
+        Long newsId = getCategoryId(category);
+        if (newsId == null) {
+            return List.of(); // 잘못된 카테고리인 경우 빈 목록 반환
+        }
+
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "collectedAt"));
+        List<Posts> posts = postsRepository.findByNewsId(newsId, pageRequest);
+        return posts.stream()
+                .map(PostsResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 키워드로 뉴스 검색
+     */
+    public List<PostsResponseDto> searchNews(String keyword, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "collectedAt"));
+        List<Posts> posts = postsRepository.searchByKeyword(keyword, pageRequest);
+        return posts.stream()
+                .map(PostsResponseDto::new)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 뉴스 상세 조회
+     */
+    public PostsResponseDto getNewsDetail(Long id) {
+        Posts post = postsRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 뉴스가 존재하지 않습니다. id=" + id));
+        return new PostsResponseDto(post);
+    }
+
+    /**
+     * 카테고리 문자열을 ID로 변환
+     */
+    private Long getCategoryId(String category) {
+        return switch (category) {
+            case "경제" -> 1L;
+            case "증권" -> 2L;
+            case "스포츠" -> 3L;
+            case "연예" -> 4L;
+            case "정치" -> 5L;
+            case "IT" -> 6L;
+            case "사회" -> 7L;
+            case "오피니언" -> 8L;
+            default -> null;
+        };
+    }
 }

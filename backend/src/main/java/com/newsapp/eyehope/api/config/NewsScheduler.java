@@ -14,9 +14,9 @@ public class NewsScheduler {
     private final NewsService newsService;
     
     /**
-     * 10분마다 자동으로 뉴스 수집 실행
+     * 5분마다 자동으로 뉴스 수집 실행
      */
-    @Scheduled(fixedRate = 60000) // 1분(60,000 밀리초)마다 실행
+    @Scheduled(fixedRate = 300000) // 5분(300,000 밀리초)마다 실행
     public void scheduleNewsCollection() {
         log.info("스케줄링된 뉴스 수집 시작");
         newsService.collectAllNews();

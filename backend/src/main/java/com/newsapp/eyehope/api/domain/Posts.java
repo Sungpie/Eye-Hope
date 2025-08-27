@@ -25,7 +25,7 @@ public class Posts {
     private String content;
 
     @Column(name = "created_at")
-    private LocalDateTime created_at;
+    private LocalDateTime createdAt;
 
     @Column(columnDefinition = "text")
     private String url;
@@ -76,5 +76,5 @@ public class Posts {
 
     @CreatedDate
     @Column(name = "collected_at")
-    private LocalDateTime collected_at;
+    private LocalDateTime collectedAt;
 }

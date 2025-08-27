@@ -11,19 +11,19 @@ public class PostsResponseDto {
     private String source;
     private String title;
     private String content;
-    private LocalDateTime created_at;
+    private LocalDateTime createdAt;
     private String url;
     private String category; // 실제로는 newsId를 변환한 카테고리 문자열
-    private LocalDateTime collected_at;
+    private LocalDateTime collectedAt;
 
     public PostsResponseDto(Posts entity) {
         this.id = entity.getId();
         this.source = entity.getSource();
         this.title = entity.getTitle();
         this.content = entity.getContent();
-        this.created_at = entity.getCreated_at();
+        this.createdAt = entity.getCreatedAt();
         this.url = entity.getUrl();
         this.category = entity.getCategory();
-        this.collected_at = entity.getCollected_at();
+        this.collectedAt = entity.getCollectedAt();
     }
 }
