@@ -10,6 +10,6 @@ import java.util.Optional;
 
 @Repository
 public interface PostsRepository extends JpaRepository<Posts, Long> {
-    Optional<Posts> findByUrl(String link); // 중복 체크용
-    boolean existsByUrl(String link);
+    Optional<Posts> findByUrl(String url); // 중복 체크용
+    boolean existsByUrl(String url);
 }
