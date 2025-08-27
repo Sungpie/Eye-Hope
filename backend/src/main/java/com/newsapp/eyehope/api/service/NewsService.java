@@ -5,6 +5,7 @@ import com.newsapp.eyehope.api.dto.PostsRequestDto;
 import com.newsapp.eyehope.api.dto.PostsResponseDto;
 import com.newsapp.eyehope.api.repository.PostsRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -13,11 +14,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NewsService {
     private final RssFeedService rssFeedService;
     private final PostsRepository postsRepository;
+    private final GeminiService geminiService;
 
     // 전체 수집
     public void collectAllNews() {
@@ -43,9 +46,42 @@ public class NewsService {
                     // NewsId가 없는 경우 기본값 설정 (예: 기타 카테고리)
                     dto.setNewsId(8L); // 기본값으로 오피니언 카테고리 설정
                 }
+
+                try {
+                    // URL을 사용하여 Gemini API로 내용 요약
+                    String summarizedContent = summarizeNewsContent(dto.getUrl(), dto.getTitle());
+
+                    // 요약된 내용이 있으면 DTO의 content 필드 업데이트
+                    if (summarizedContent != null && !summarizedContent.isEmpty() &&
+                        !summarizedContent.startsWith("Error")) {
+                        dto.setContent(summarizedContent);
+                        log.info("뉴스 요약 성공: {}", dto.getTitle());
+                    } else {
+                        log.warn("뉴스 요약 실패, 원본 내용 유지: {}", dto.getTitle());
+                    }
+                } catch (Exception e) {
+                    log.error("뉴스 요약 중 오류 발생: {}", e.getMessage());
+                }
+
                 postsRepository.save(dto.toEntity());
             }
         }
+    }
+
+    /**
+     * Gemini API를 사용하여 뉴스 URL의 내용을 요약
+     * @param url 뉴스 기사 URL
+     * @param title 뉴스 제목
+     * @return 요약된 내용
+     */
+    private String summarizeNewsContent(String url, String title) {
+        String prompt = String.format(
+            "다음 뉴스 기사 URL을 분석하고 내용을 요약해주세요. 요약은 한국어로 작성하고, 3-4문장 정도로 간결하게 작성해주세요. " +
+            "고유명사/수치/날짜 를 유지해주세요. 과장, 의견, 추측 금지 (본문에 없는 내용 금지). 문장을 짧게, 청각 사용자(TTS) 친화적으로 작성. URL: %s, 제목: %s",
+            url, title
+        );
+
+        return geminiService.generateContent(prompt);
     }
 
 
