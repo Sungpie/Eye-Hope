@@ -47,3 +47,16 @@ springdoc:
     path: /v3/api-docs
     # API 문서 활성화/비활성화
     enabled: true
+
+logging:
+  file:
+    # 로그 파일이 저장될 경로와 기본 파일명입니다.
+    name: logs/eyehope.log
+  logback:
+    rollingpolicy:
+      # 위에서 지정한 eyehope.log 파일이 날짜가 지나면 어떤 패턴으로 바뀔지 정합니다.
+      # 'logs/eyehope.%d{yyyy-MM-dd}.log'는 'logs/eyehope.2025-09-03.log' 와 같은 형태로 저장됩니다.
+      file-name-pattern: logs/eyehope.%d{yyyy-MM-dd}.%i.log.gz
+      # 로그 보관 기간을 정합니다. 30일이 지난 로그 파일은 자동으로 삭제됩니다.
+      max-history: 30
+      max-file-size: 10MB

@@ -1,6 +1,7 @@
 package com.newsapp.eyehope.api.service;
 
 import com.newsapp.eyehope.api.config.GeminiConfig;
+import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+@Slf4j
 @Service
 public class GeminiService {
 
@@ -58,6 +60,7 @@ public class GeminiService {
             // Parse the response
             return extractTextFromResponse(response);
         } catch (Exception e) {
+            log.error("Gemini API 호출 중 오류 발생: {}", e.getMessage(), e);
             return "Error generating content: " + e.getMessage();
         }
     }
@@ -84,6 +87,7 @@ public class GeminiService {
 
             return "No response generated";
         } catch (Exception e) {
+            log.error("Gemini API 응답 파싱 중 오류 발생: {}", e.getMessage(), e);
             return "Error parsing response: " + e.getMessage();
         }
     }
