@@ -50,7 +50,11 @@ public class UserController {
      * 
      * @param requestDto the request DTO containing device ID and notification times
      * @return the response entity containing the saved notification schedules
-     */
+     *
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "사용자 알림 시간 등록",
+            description = "사용자별 알림 시간을 등록합니다. UUID와 시간 정보(ex; 14:00)가 필요합니다.  "
+    )
     @PostMapping("/schedules")
     public ResponseEntity<ApiResponse<NotificationScheduleResponseDto>> saveNotificationSchedules(
             @Valid @RequestBody NotificationScheduleRequestDto requestDto) {
@@ -65,6 +69,10 @@ public class UserController {
      * @param deviceId the device ID
      * @return the response entity containing the notification schedules
      */
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "사용자 알림 시간 조회",
+            description = "사용자별 알림 시간을 조회합니다."
+    )
     @GetMapping("/schedules/{deviceId}")
     public ResponseEntity<ApiResponse<NotificationScheduleResponseDto>> getNotificationSchedules(
             @PathVariable UUID deviceId) {
