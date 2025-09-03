@@ -46,6 +46,14 @@ public class GeminiService {
             contents.put(content);
 
             requestBody.put("contents", contents);
+            
+            // 추론 기능을 끄기 위한 thinkingConfig 설정
+            // 나중에 킬거면 -1로 변경하면 됨
+            JSONObject generationConfig = new JSONObject();
+            JSONObject thinkingConfig = new JSONObject();
+            thinkingConfig.put("thinkingBudget", 0); // 추론 기능 끄기
+            generationConfig.put("thinkingConfig", thinkingConfig);
+            requestBody.put("generationConfig", generationConfig);
 
             // Set up headers
             HttpHeaders headers = new HttpHeaders();
