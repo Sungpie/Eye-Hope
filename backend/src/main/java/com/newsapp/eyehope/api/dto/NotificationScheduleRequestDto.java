@@ -20,6 +20,6 @@ public class NotificationScheduleRequestDto {
     @NotNull(message = "Device ID cannot be null")
     private UUID deviceId;
 
-    @NotEmpty(message = "Notification times cannot be empty")
-    private List<String> notificationTimes;
+    @NotEmpty(message = "Notification time cannot be empty")
+    private List<String> notificationTime;
 }

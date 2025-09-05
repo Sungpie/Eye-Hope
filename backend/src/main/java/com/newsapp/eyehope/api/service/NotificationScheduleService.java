@@ -30,7 +30,7 @@ public class NotificationScheduleService {
     @Transactional
     public NotificationScheduleResponseDto saveNotificationSchedules(NotificationScheduleRequestDto requestDto) {
         UUID deviceId = requestDto.getDeviceId();
-        List<String> notificationTimeStrings = requestDto.getNotificationTimes();
+        List<String> notificationTimeStrings = requestDto.getNotificationTime();
 
         // Verify that the device exists
         userRepository.findById(deviceId)

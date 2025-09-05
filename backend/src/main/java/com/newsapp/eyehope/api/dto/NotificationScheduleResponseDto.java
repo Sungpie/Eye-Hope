@@ -15,13 +15,13 @@ import java.util.UUID;
 public class NotificationScheduleResponseDto {
 
     private UUID deviceId;
-    private List<String> notificationTimes;
+    private List<String> notificationTime;
 
     // Static method to create a response DTO from a list of notification times
-    public static NotificationScheduleResponseDto from(UUID deviceId, List<String> notificationTimes) {
+    public static NotificationScheduleResponseDto from(UUID deviceId, List<String> notificationTime) {
         return NotificationScheduleResponseDto.builder()
                 .deviceId(deviceId)
-                .notificationTimes(notificationTimes)
+                .notificationTime(notificationTime)
                 .build();
     }
 }
