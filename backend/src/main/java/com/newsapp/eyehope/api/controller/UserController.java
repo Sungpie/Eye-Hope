@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Slf4j
@@ -46,11 +47,35 @@ public class UserController {
     }
 
     /**
+     * 사용자 정보 조회
+     */
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "사용자 정보 조회",
+            description = "디바이스ID를 통해 사용자 정보를 조회합니다."
+    )
+    @GetMapping("/{deviceId}")
+    public ResponseEntity<ApiResponse<UserResponseDto>> getUserInfo(@PathVariable UUID deviceId) {
+        try {
+            log.info("사용자 정보 조회 요청: {}", deviceId);
+            UserResponseDto responseDto = userService.getUserByDeviceId(deviceId);
+            return ResponseEntity.ok(ApiResponse.success("사용자 정보 조회가 완료되었습니다.", responseDto));
+        } catch (NoSuchElementException e) {
+            log.warn("사용자 정보 조회 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("사용자 정보 조회 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("사용자 정보 조회 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
      * Save notification schedules for a device
      * 
      * @param requestDto the request DTO containing device ID and notification times
      * @return the response entity containing the saved notification schedules
-     *
+     */
     @io.swagger.v3.oas.annotations.Operation(
             summary = "사용자 알림 시간 등록",
             description = "사용자별 알림 시간을 등록합니다. UUID와 시간 정보(ex; 14:00)가 필요합니다.  "

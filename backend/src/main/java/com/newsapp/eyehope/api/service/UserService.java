@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Slf4j
@@ -61,5 +62,18 @@ public class UserService {
             log.error("비밀번호 해싱 오류", e);
             throw new RuntimeException("비밀번호 해싱 중 오류가 발생했습니다.", e);
         }
+    }
+
+    /**
+     * 디바이스 ID로 사용자 정보 조회
+     */
+    @Transactional(readOnly = true)
+    public UserResponseDto getUserByDeviceId(UUID deviceId) {
+        User user = userRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new NoSuchElementException("해당 디바이스 ID로 등록된 사용자가 없습니다: " + deviceId));
+
+        log.info("사용자 정보 조회 완료: {}", user.getEmail());
+
+        return UserResponseDto.fromEntity(user);
     }
 }
