@@ -30,29 +30,29 @@ public class NotificationScheduleService {
     @Transactional
     public NotificationScheduleResponseDto saveNotificationSchedules(NotificationScheduleRequestDto requestDto) {
         UUID deviceId = requestDto.getDeviceId();
-        List<LocalTime> notificationTimes = requestDto.getNotificationTimes();
-        
+        List<String> notificationTimeStrings = requestDto.getNotificationTimes();
+
         // Verify that the device exists
         userRepository.findById(deviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Device with ID " + deviceId + " not found"));
-        
+
         // Delete existing notification schedules for this device
         notificationScheduleRepository.deleteByDeviceId(deviceId);
-        
+
         // Create and save new notification schedules
-        List<NotificationSchedule> schedules = notificationTimes.stream()
-                .map(time -> NotificationSchedule.builder()
+        List<NotificationSchedule> schedules = notificationTimeStrings.stream()
+                .map(timeStr -> NotificationSchedule.builder()
                         .deviceId(deviceId)
-                        .notificationTime(time)
+                        .notificationTime(LocalTime.parse(timeStr))
                         .build())
                 .collect(Collectors.toList());
-        
+
         notificationScheduleRepository.saveAll(schedules);
-        
+
         // Return the response DTO
-        return NotificationScheduleResponseDto.from(deviceId, notificationTimes);
+        return NotificationScheduleResponseDto.from(deviceId, notificationTimeStrings);
     }
-    
+
     /**
      * Get notification schedules for a device
      * 
@@ -64,16 +64,16 @@ public class NotificationScheduleService {
         // Verify that the device exists
         userRepository.findById(deviceId)
                 .orElseThrow(() -> new IllegalArgumentException("Device with ID " + deviceId + " not found"));
-        
+
         // Get notification schedules for this device
         List<NotificationSchedule> schedules = notificationScheduleRepository.findByDeviceId(deviceId);
-        
-        // Extract notification times
-        List<LocalTime> notificationTimes = schedules.stream()
-                .map(NotificationSchedule::getNotificationTime)
+
+        // Extract notification times as strings
+        List<String> notificationTimeStrings = schedules.stream()
+                .map(schedule -> schedule.getNotificationTime().toString())
                 .collect(Collectors.toList());
-        
+
         // Return the response DTO
-        return NotificationScheduleResponseDto.from(deviceId, notificationTimes);
+        return NotificationScheduleResponseDto.from(deviceId, notificationTimeStrings);
     }
 }

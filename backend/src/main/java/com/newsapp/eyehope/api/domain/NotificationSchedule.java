@@ -25,7 +25,8 @@ public class NotificationSchedule {
     @Column(name = "device_id", nullable = false)
     private UUID deviceId;
 
-    @Column(name = "notification_time", nullable = false)
+    @Column(name = "notification_time", nullable = false, columnDefinition = "VARCHAR")
+    @Convert(converter = com.newsapp.eyehope.api.converter.LocalTimeAttributeConverter.class)
     private LocalTime notificationTime;
 
 }
