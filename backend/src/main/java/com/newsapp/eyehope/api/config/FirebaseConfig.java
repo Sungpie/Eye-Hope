@@ -17,17 +17,24 @@ public class FirebaseConfig {
     @PostConstruct
     public void initialize() {
         try {
-            // Check if Firebase app is already initialized
+            // Check if the Firebase app is already initialized
             if (FirebaseApp.getApps().isEmpty()) {
+                ClassPathResource resource = new ClassPathResource("firebase/eye-hope-firebase-adminsdk-fbsvc-ee4f3eeaf3.json");
+
+                if (!resource.exists()) {
+                    log.warn("Firebase credentials file not found. Firebase services will be disabled.");
+                    return; // Skip initialization but don't crash the application
+                }
+
                 // Load Firebase service account credentials
                 GoogleCredentials googleCredentials = GoogleCredentials
-                        .fromStream(new ClassPathResource("firebase/eye-hope-firebase-adminsdk-fbsvc-ee4f3eeaf3.json").getInputStream());
-                
+                        .fromStream(resource.getInputStream());
+
                 // Configure Firebase options
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(googleCredentials)
                         .build();
-                
+
                 // Initialize Firebase
                 FirebaseApp.initializeApp(options);
                 log.info("Firebase application has been initialized successfully");
@@ -35,8 +42,8 @@ public class FirebaseConfig {
                 log.info("Firebase application is already initialized");
             }
         } catch (IOException e) {
-            log.error("Error initializing Firebase application: {}", e.getMessage(), e);
-            throw new RuntimeException("Firebase initialization failed", e);
+            log.error("Error initializing Firebase application: {}. Firebase services will be disabled.", e.getMessage());
+            // Don't throw exception, allow application to start without Firebase
         }
     }
 }

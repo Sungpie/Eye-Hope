@@ -24,7 +24,7 @@ public class Posts {
     @Column(columnDefinition = "text")
     private String content;
 
-    @Column(name = "created_at")
+    @Column(name = "created_at", columnDefinition = "TIMESTAMP WITHOUT TIME ZONE")
     private LocalDateTime createdAt;
 
     @Column(columnDefinition = "text")

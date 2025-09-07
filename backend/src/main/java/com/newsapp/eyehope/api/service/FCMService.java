@@ -1,5 +1,6 @@
 package com.newsapp.eyehope.api.service;
 
+import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.*;
 import com.newsapp.eyehope.api.domain.Topic;
 import com.newsapp.eyehope.api.domain.User;
@@ -28,6 +29,19 @@ public class FCMService {
     private final UserTopicRepository userTopicRepository;
 
     /**
+     * Check if Firebase is initialized
+     * 
+     * @return true if Firebase is initialized, false otherwise
+     */
+    private boolean isFirebaseInitialized() {
+        boolean initialized = !FirebaseApp.getApps().isEmpty();
+        if (!initialized) {
+            log.warn("Firebase is not initialized. FCM services are disabled.");
+        }
+        return initialized;
+    }
+
+    /**
      * Send notification to a specific device
      *
      * @param token Device token
@@ -37,6 +51,12 @@ public class FCMService {
      * @return Message ID if successful
      */
     public String sendNotificationToDevice(String token, String title, String body, Map<String, String> data) {
+        // Check if Firebase is initialized
+        if (!isFirebaseInitialized()) {
+            log.warn("Skipping notification to device {} because Firebase is not initialized", token);
+            return "FIREBASE_NOT_INITIALIZED";
+        }
+
         try {
             // Validate token format (basic validation)
             if (token == null || token.trim().isEmpty()) {
@@ -65,6 +85,13 @@ public class FCMService {
      * @throws IllegalArgumentException if tokens list is null/empty
      */
     public BatchResponse sendNotificationToDevices(List<String> tokens, String title, String body, Map<String, String> data) {
+        // Check if Firebase is initialized
+        if (!isFirebaseInitialized()) {
+            log.warn("Skipping notifications to {} devices because Firebase is not initialized", 
+                    tokens != null ? tokens.size() : 0);
+            return null; // Return null to indicate Firebase is not initialized
+        }
+
         try {
             // Validate tokens list
             if (tokens == null || tokens.isEmpty()) {
@@ -116,6 +143,12 @@ public class FCMService {
      * @return Message ID if successful
      */
     public String sendNotificationToTopic(String topic, String title, String body, Map<String, String> data) {
+        // Check if Firebase is initialized
+        if (!isFirebaseInitialized()) {
+            log.warn("Skipping notification to topic {} because Firebase is not initialized", topic);
+            return "FIREBASE_NOT_INITIALIZED";
+        }
+
         try {
             // Validate topic name
             if (topic == null || topic.trim().isEmpty()) {
@@ -160,6 +193,12 @@ public class FCMService {
      * @throws IllegalArgumentException if tokens list is null/empty or topic is invalid
      */
     public TopicManagementResponse subscribeToTopic(List<String> tokens, String topic) {
+        // Check if Firebase is initialized
+        if (!isFirebaseInitialized()) {
+            log.warn("Skipping subscription to topic {} because Firebase is not initialized", topic);
+            return null; // Return null to indicate Firebase is not initialized
+        }
+
         try {
             // Validate tokens list
             if (tokens == null || tokens.isEmpty()) {
@@ -212,6 +251,38 @@ public class FCMService {
      */
     @Transactional
     public TopicManagementResponse subscribeUserToTopic(UUID deviceId, String topic) {
+        // Check if Firebase is initialized
+        if (!isFirebaseInitialized()) {
+            log.warn("Skipping user subscription to topic {} because Firebase is not initialized", topic);
+
+            // Even if Firebase is not available, we can still create the database relationship
+            // Find the user
+            User user = userRepository.findByDeviceId(deviceId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found with deviceId: " + deviceId));
+
+            // Get or create the topic
+            Topic topicEntity = topicRepository.findByTopicName(topic)
+                    .orElseGet(() -> {
+                        Topic newTopic = Topic.builder()
+                                .topicName(topic)
+                                .build();
+                        return topicRepository.save(newTopic);
+                    });
+
+            // Check if subscription already exists
+            if (!userTopicRepository.existsByUserAndTopic(user, topicEntity)) {
+                // Create and save the user-topic relationship
+                UserTopic userTopic = UserTopic.builder()
+                        .user(user)
+                        .topic(topicEntity)
+                        .build();
+                userTopicRepository.save(userTopic);
+                log.info("Persisted topic subscription for user {} to topic {} (Firebase unavailable)", deviceId, topic);
+            }
+
+            return null;
+        }
+
         // Find the user
         User user = userRepository.findByDeviceId(deviceId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with deviceId: " + deviceId));
@@ -224,6 +295,11 @@ public class FCMService {
         // Subscribe to FCM topic
         List<String> tokens = List.of(user.getFcmToken());
         TopicManagementResponse response = subscribeToTopic(tokens, topic);
+
+        // If Firebase is not initialized, response will be null
+        if (response == null) {
+            return null;
+        }
 
         // If subscription was successful, persist in database
         if (response.getSuccessCount() > 0) {
