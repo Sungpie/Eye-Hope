@@ -1,0 +1,28 @@
+## 워크플로우 이름 지정
+name: ci.yml
+
+## 워크플로우가 시작될 조건 지정
+## 메인 브랜치에 Push할 때마다 워크플로우를 시작하도록
+on:
+  push:
+    branches: [ main ]
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    ## 실행 스텝 지정
+    steps:
+      ## 지정한 레포지터리를 확인하고 코드에 대한 작업을 실행시킴
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean build
