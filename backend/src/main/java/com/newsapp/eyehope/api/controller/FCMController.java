@@ -1,0 +1,120 @@
+package com.newsapp.eyehope.api.controller;
+
+import com.google.firebase.messaging.BatchResponse;
+import com.google.firebase.messaging.TopicManagementResponse;
+import com.newsapp.eyehope.api.dto.ApiResponse;
+import com.newsapp.eyehope.api.dto.FCMNotificationRequestDto;
+import com.newsapp.eyehope.api.dto.FCMTopicRequestDto;
+import com.newsapp.eyehope.api.service.FCMService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/fcm")
+@RequiredArgsConstructor
+@Tag(name = "FCM", description = "Firebase Cloud Messaging API")
+public class FCMController {
+
+    private final FCMService fcmService;
+
+    @PostMapping("/send")
+    @Operation(summary = "Send FCM notification", description = "단일 기기, 여러 기기 또는 특정 주제(토픽)에 알림을 보냅니다.")
+    public ResponseEntity<ApiResponse<Object>> sendNotification(@RequestBody FCMNotificationRequestDto requestDto) {
+        log.info("Received request to send notification: {}", requestDto);
+
+        Object response;
+
+        switch (requestDto.getTargetType().toLowerCase()) {
+            case "token":
+                if (requestDto.getToken() == null || requestDto.getToken().isEmpty()) {
+                    return ResponseEntity.badRequest().body(
+                            ApiResponse.error("Token is required for targetType 'token'"));
+                }
+                response = fcmService.sendNotificationToDevice(
+                        requestDto.getToken(),
+                        requestDto.getTitle(),
+                        requestDto.getBody(),
+                        requestDto.getData());
+                break;
+
+            case "tokens":
+                if (requestDto.getTokens() == null || requestDto.getTokens().isEmpty()) {
+                    return ResponseEntity.badRequest().body(
+                            ApiResponse.error("Tokens list is required for targetType 'tokens'"));
+                }
+                response = fcmService.sendNotificationToDevices(
+                        requestDto.getTokens(),
+                        requestDto.getTitle(),
+                        requestDto.getBody(),
+                        requestDto.getData());
+                break;
+
+            case "topic":
+                if (requestDto.getTopic() == null || requestDto.getTopic().isEmpty()) {
+                    return ResponseEntity.badRequest().body(
+                            ApiResponse.error("Topic is required for targetType 'topic'"));
+                }
+                response = fcmService.sendNotificationToTopic(
+                        requestDto.getTopic(),
+                        requestDto.getTitle(),
+                        requestDto.getBody(),
+                        requestDto.getData());
+                break;
+
+            default:
+                return ResponseEntity.badRequest().body(
+                        ApiResponse.error("Invalid targetType. Must be one of: 'token', 'tokens', or 'topic'"));
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/topic/subscribe")
+    @Operation(summary = "Subscribe to FCM topic", description = "특정 기기 토큰들을 FCM 토픽에 구독시킵니다.")
+    public ResponseEntity<ApiResponse<TopicManagementResponse>> subscribeToTopic(@RequestBody FCMTopicRequestDto requestDto) {
+        log.info("Received request to subscribe to topic: {}", requestDto);
+
+        if (requestDto.getTokens() == null || requestDto.getTokens().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Tokens list is required"));
+        }
+
+        if (requestDto.getTopic() == null || requestDto.getTopic().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Topic is required"));
+        }
+
+        TopicManagementResponse response = fcmService.subscribeToTopic(
+                requestDto.getTokens(),
+                requestDto.getTopic());
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/topic/unsubscribe")
+    @Operation(summary = "Unsubscribe from FCM topic", description = "특정 기기 토큰들을 FCM 토픽에서 구독 취소시킵니다.")
+    public ResponseEntity<ApiResponse<TopicManagementResponse>> unsubscribeFromTopic(@RequestBody FCMTopicRequestDto requestDto) {
+        log.info("Received request to unsubscribe from topic: {}", requestDto);
+
+        if (requestDto.getTokens() == null || requestDto.getTokens().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Tokens list is required"));
+        }
+
+        if (requestDto.getTopic() == null || requestDto.getTopic().isEmpty()) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Topic is required"));
+        }
+
+        TopicManagementResponse response = fcmService.unsubscribeFromTopic(
+                requestDto.getTokens(),
+                requestDto.getTopic());
+
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+}
