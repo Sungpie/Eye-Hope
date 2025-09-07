@@ -1,8 +1,8 @@
-## 워크플로우 이름 지정
+# 워크플로우 이름 지정
 name: CI/CD with GitHub Actions
 
-## 워크플로우가 시작될 조건 지정
-## 메인 브랜치에 Push할 때마다 워크플로우를 시작하도록
+# 워크플로우가 시작될 조건 지정
+# 메인 브랜치에 Push할 때마다 워크플로우를 시작하도록
 on:
   push:
     branches: [ main ]
@@ -25,17 +25,19 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+        working-directory: ./backend # 'backend' 폴더에서 실행하도록 경로 지정
 
       - name: Build with Gradle
         run: ./gradlew clean build
+        working-directory: ./backend # 'backend' 폴더에서 빌드 실행
 
       ## 5. 빌드된 JAR 파일을 GitHub Actions의 artifact로 업로드
       ## 'deploy' 작업에서 이 파일을 다운로드하여 사용합니다.
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: springboot-jar
-          path: build/libs/*.jar
+          path: backend/build/libs/*.jar # 빌드 결과물의 정확한 경로 지정
 
   ## CD 작업 정의
   deploy:
@@ -46,7 +48,7 @@ jobs:
     steps:
       # 1. 'build' 작업에서 업로드한 artifact 다운로드
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: springboot-jar
 
@@ -74,8 +76,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # 변수 설정
-            APP_NAME="Eye-Hope" # 배포할 JAR 파일의 고정된 이름
-            JAR_SOURCE_NAME="${{ env.jar_path }}" # Runner에서 복사해온 원본 JAR 파일 이름
+            APP_NAME="Eye-Hope"
+            JAR_SOURCE_NAME="${{ env.jar_path }}"
             DEPLOY_DIR="/home/${{ secrets.EC2_USERNAME }}/app"
             JAR_DEST_PATH="$DEPLOY_DIR/$APP_NAME.jar"
             
@@ -84,24 +86,23 @@ jobs:
             
             # 기존에 실행 중인 애플리케이션 종료
             echo "Stopping old application..."
-            # pgrep으로 '$APP_NAME.jar'를 실행하는 Java 프로세스를 찾아 PID를 가져옵니다.
             PID=$(pgrep -f "java -jar.*$APP_NAME.jar")
             if [ -n "$PID" ]; then
               kill -15 $PID
-              # 프로세스가 완전히 종료될 때까지 잠시 대기합니다.
               while ps -p $PID > /dev/null; do sleep 1; done
               echo "Process $PID killed."
             else
               echo "No running process found."
             fi
             
-            # 새 JAR 파일로 교체 (홈 디렉토리에서 배포 디렉토리로 이동 및 이름 변경)
+            # 새 JAR 파일로 교체
             echo "Deploying new application..."
             mv "/home/${{ secrets.EC2_USERNAME }}/${JAR_SOURCE_NAME}" "$JAR_DEST_PATH"
             
-            # 새 애플리케이션 실행 (백그라운드 실행 및 로그 파일 생성)
-            echo "Starting new application..."
+            # 새 애플리케이션 실행
+            echo "Starting new application with memory options..."
             cd $DEPLOY_DIR
             nohup java -jar -Xms512m -Xmx512m $JAR_DEST_PATH &
             
             echo "Deployment successful!"
+
