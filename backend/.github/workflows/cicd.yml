@@ -102,6 +102,6 @@ jobs:
             # 새 애플리케이션 실행 (백그라운드 실행 및 로그 파일 생성)
             echo "Starting new application..."
             cd $DEPLOY_DIR
-            nohup java -jar $JAR_DEST_PATH > application.log 2>&1 &
+            nohup java -jar -Xms512m -Xmx512m $JAR_DEST_PATH &
             
             echo "Deployment successful!"
