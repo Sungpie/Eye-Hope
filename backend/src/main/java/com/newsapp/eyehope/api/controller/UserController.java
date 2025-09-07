@@ -7,6 +7,7 @@ import com.newsapp.eyehope.api.dto.PasswordChangeDto;
 import com.newsapp.eyehope.api.dto.UserRequestDto;
 import com.newsapp.eyehope.api.dto.UserResponseDto;
 import com.newsapp.eyehope.api.dto.UserUpdateDto;
+import com.newsapp.eyehope.api.service.FCMService;
 import com.newsapp.eyehope.api.service.NotificationScheduleService;
 import com.newsapp.eyehope.api.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -28,13 +29,14 @@ public class UserController {
 
     private final UserService userService;
     private final NotificationScheduleService notificationScheduleService;
+    private final FCMService fcmService;
 
     /**
      * 사용자 등록
      */
     @io.swagger.v3.oas.annotations.Operation(
         summary = "사용자 등록",
-        description = "새로운 사용자를 등록합니다. 디바이스 ID, 이름, 이메일, 별명, 비밀번호 정보가 필요합니다."
+        description = "새로운 사용자를 등록합니다. 디바이스 ID, 이름, 이메일, 별명, 비밀번호, FCM_토큰 정보가 필요합니다."
     )
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<UserResponseDto>> registerUser(
@@ -112,7 +114,7 @@ public class UserController {
      */
     @io.swagger.v3.oas.annotations.Operation(
             summary = "사용자 정보 전체 업데이트",
-            description = "사용자의 이름, 이메일, 별명 정보를 모두 업데이트합니다."
+            description = "사용자의 이름, 이메일, 별명 정보를 모두 업데이트합니다. FCM 토큰은 선택적으로 업데이트할 수 있습니다."
     )
     @PutMapping("/{deviceId}")
     public ResponseEntity<ApiResponse<UserResponseDto>> updateUser(
@@ -142,7 +144,7 @@ public class UserController {
      */
     @io.swagger.v3.oas.annotations.Operation(
             summary = "사용자 정보 부분 업데이트",
-            description = "사용자의 이름, 이메일, 별명 정보 중 일부만 업데이트합니다."
+            description = "사용자의 이름, 이메일, 별명, FCM_토큰 정보 중 일부만 업데이트합니다."
     )
     @PatchMapping("/{deviceId}")
     public ResponseEntity<ApiResponse<UserResponseDto>> partialUpdateUser(
@@ -193,6 +195,36 @@ public class UserController {
             log.error("비밀번호 변경 중 오류 발생", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("비밀번호 변경 중 오류가 발생했습니다."));
+        }
+    }
+
+    /**
+     * Block notifications for a device
+     * 
+     * @param deviceId the device ID
+     * @return the response entity
+     */
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "알림 차단",
+            description = "사용자의 알림을 완전히 차단합니다. 알림 스케줄이 삭제되고 daily_news 토픽에서 구독 해제됩니다."
+    )
+    @DeleteMapping("/schedules/{deviceId}")
+    public ResponseEntity<ApiResponse<Void>> blockNotifications(@PathVariable UUID deviceId) {
+        try {
+            log.info("알림 차단 요청: {}", deviceId);
+
+            // Call the service method to block notifications
+            notificationScheduleService.blockNotifications(deviceId);
+
+            return ResponseEntity.ok(ApiResponse.<Void>success("알림이 성공적으로 차단되었습니다.", null));
+        } catch (IllegalArgumentException e) {
+            log.warn("알림 차단 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("알림 차단 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("알림 차단 중 오류가 발생했습니다."));
         }
     }
 }

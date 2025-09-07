@@ -15,4 +15,5 @@ public class UserUpdateDto {
     private String name;
     private String email;
     private String nickname;
+    private String fcmToken;
 }

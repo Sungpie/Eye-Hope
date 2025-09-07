@@ -20,7 +20,8 @@ public class UserRequestDto {
     private String email;
     private String nickname;
     private String password;
-    
+    private String fcmToken;
+
     public User toEntity(String passwordHash) {
         return User.builder()
                 .deviceId(deviceId)
@@ -28,6 +29,7 @@ public class UserRequestDto {
                 .email(email)
                 .nickname(nickname)
                 .passwordHash(passwordHash)
+                .fcmToken(fcmToken)
                 .build();
     }
 }

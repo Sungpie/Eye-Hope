@@ -5,17 +5,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class FCMTopicRequestDto {
-    
-    // List of device tokens
-    private List<String> tokens;
-    
+
+    // Device ID
+    private UUID deviceId;
+
     // Topic name
     private String topic;
 }

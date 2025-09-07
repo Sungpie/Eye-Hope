@@ -2,9 +2,11 @@ package com.newsapp.eyehope.api.controller;
 
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.TopicManagementResponse;
+import com.newsapp.eyehope.api.domain.User;
 import com.newsapp.eyehope.api.dto.ApiResponse;
 import com.newsapp.eyehope.api.dto.FCMNotificationRequestDto;
 import com.newsapp.eyehope.api.dto.FCMTopicRequestDto;
+import com.newsapp.eyehope.api.repository.UserRepository;
 import com.newsapp.eyehope.api.service.FCMService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +14,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 @Slf4j
 @RestController
@@ -21,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class FCMController {
 
     private final FCMService fcmService;
+    private final UserRepository userRepository;
 
     @PostMapping("/send")
     @Operation(summary = "Send FCM notification", description = "단일 기기, 여러 기기 또는 특정 주제(토픽)에 알림을 보냅니다.")
@@ -75,46 +82,62 @@ public class FCMController {
     }
 
     @PostMapping("/topic/subscribe")
-    @Operation(summary = "Subscribe to FCM topic", description = "특정 기기 토큰들을 FCM 토픽에 구독시킵니다.")
+    @Operation(summary = "Subscribe to FCM topic", description = "특정 기기를 FCM 토픽에 구독시킵니다. device_id와 topic을 입력받아 처리합니다. DB에도 구독 정보가 저장됩니다.")
     public ResponseEntity<ApiResponse<TopicManagementResponse>> subscribeToTopic(@RequestBody FCMTopicRequestDto requestDto) {
         log.info("Received request to subscribe to topic: {}", requestDto);
 
-        if (requestDto.getTokens() == null || requestDto.getTokens().isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Tokens list is required"));
-        }
-
+        // Topic is always required
         if (requestDto.getTopic() == null || requestDto.getTopic().isEmpty()) {
             return ResponseEntity.badRequest().body(
                     ApiResponse.error("Topic is required"));
         }
 
-        TopicManagementResponse response = fcmService.subscribeToTopic(
-                requestDto.getTokens(),
-                requestDto.getTopic());
+        // Device ID is required
+        if (requestDto.getDeviceId() == null) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Device ID is required"));
+        }
 
-        return ResponseEntity.ok(ApiResponse.success(response));
+        try {
+            // Use the method that updates the database
+            TopicManagementResponse response = fcmService.subscribeUserToTopic(
+                    requestDto.getDeviceId(),
+                    requestDto.getTopic());
+
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error(e.getMessage()));
+        }
     }
 
     @PostMapping("/topic/unsubscribe")
-    @Operation(summary = "Unsubscribe from FCM topic", description = "특정 기기 토큰들을 FCM 토픽에서 구독 취소시킵니다.")
+    @Operation(summary = "Unsubscribe from FCM topic", description = "특정 기기를 FCM 토픽에서 구독 취소시킵니다. device_id와 topic을 입력받아 처리합니다. DB에서도 구독 정보가 삭제됩니다.")
     public ResponseEntity<ApiResponse<TopicManagementResponse>> unsubscribeFromTopic(@RequestBody FCMTopicRequestDto requestDto) {
         log.info("Received request to unsubscribe from topic: {}", requestDto);
 
-        if (requestDto.getTokens() == null || requestDto.getTokens().isEmpty()) {
-            return ResponseEntity.badRequest().body(
-                    ApiResponse.error("Tokens list is required"));
-        }
-
+        // Topic is always required
         if (requestDto.getTopic() == null || requestDto.getTopic().isEmpty()) {
             return ResponseEntity.badRequest().body(
                     ApiResponse.error("Topic is required"));
         }
 
-        TopicManagementResponse response = fcmService.unsubscribeFromTopic(
-                requestDto.getTokens(),
-                requestDto.getTopic());
+        // Device ID is required
+        if (requestDto.getDeviceId() == null) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error("Device ID is required"));
+        }
 
-        return ResponseEntity.ok(ApiResponse.success(response));
+        try {
+            // Use the method that updates the database
+            TopicManagementResponse response = fcmService.unsubscribeUserFromTopic(
+                    requestDto.getDeviceId(),
+                    requestDto.getTopic());
+
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(
+                    ApiResponse.error(e.getMessage()));
+        }
     }
 }

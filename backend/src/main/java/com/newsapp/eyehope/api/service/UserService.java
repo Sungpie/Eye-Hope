@@ -49,6 +49,11 @@ public class UserService {
             throw new IllegalArgumentException("비밀번호가 비어 있거나 공백일 수 없습니다.");
         }
 
+        // Validate FCM token (can be null, but not empty)
+        if (requestDto.getFcmToken() != null && !StringUtils.hasText(requestDto.getFcmToken())) {
+            throw new IllegalArgumentException("FCM 토큰이 비어 있거나 공백일 수 없습니다.");
+        }
+
         // 이메일 중복 확인 (이메일이 있는 경우에만)
         if (requestDto.getEmail() != null && userRepository.existsByEmail(requestDto.getEmail())) {
             throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
@@ -124,6 +129,11 @@ public class UserService {
             throw new IllegalArgumentException("이메일이 비어 있거나 공백일 수 없습니다.");
         }
 
+        // Validate FCM token (can be null, but not empty)
+        if (updateDto.getFcmToken() != null && !StringUtils.hasText(updateDto.getFcmToken())) {
+            throw new IllegalArgumentException("FCM 토큰이 비어 있거나 공백일 수 없습니다.");
+        }
+
         // 이메일 중복 확인 (이메일이 변경되는 경우에만)
         if (updateDto.getEmail() != null && !updateDto.getEmail().equals(user.getEmail()) 
                 && userRepository.existsByEmail(updateDto.getEmail())) {
@@ -144,6 +154,10 @@ public class UserService {
         } else if (user.getNickname() == null || !StringUtils.hasText(user.getNickname())) {
             // Ensure nickname is never null or empty, even if not provided in update
             throw new IllegalArgumentException("닉네임은 필수이며 비어 있거나 공백일 수 없습니다.");
+        }
+
+        if (updateDto.getFcmToken() != null) {
+            user.setFcmToken(updateDto.getFcmToken());
         }
 
         User updatedUser = userRepository.save(user);

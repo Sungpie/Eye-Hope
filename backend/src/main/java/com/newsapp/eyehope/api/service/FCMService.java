@@ -1,17 +1,31 @@
 package com.newsapp.eyehope.api.service;
 
 import com.google.firebase.messaging.*;
+import com.newsapp.eyehope.api.domain.Topic;
+import com.newsapp.eyehope.api.domain.User;
+import com.newsapp.eyehope.api.domain.UserTopic;
+import com.newsapp.eyehope.api.repository.TopicRepository;
+import com.newsapp.eyehope.api.repository.UserRepository;
+import com.newsapp.eyehope.api.repository.UserTopicRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FCMService {
+
+    private final UserRepository userRepository;
+    private final TopicRepository topicRepository;
+    private final UserTopicRepository userTopicRepository;
 
     /**
      * Send notification to a specific device
@@ -190,6 +204,56 @@ public class FCMService {
     }
 
     /**
+     * Subscribe a user to a topic and persist the subscription in the database
+     *
+     * @param deviceId User's device ID
+     * @param topic    Topic name
+     * @return TopicManagementResponse
+     */
+    @Transactional
+    public TopicManagementResponse subscribeUserToTopic(UUID deviceId, String topic) {
+        // Find the user
+        User user = userRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with deviceId: " + deviceId));
+
+        // Check if user has FCM token
+        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
+            throw new IllegalArgumentException("User does not have an FCM token registered");
+        }
+
+        // Subscribe to FCM topic
+        List<String> tokens = List.of(user.getFcmToken());
+        TopicManagementResponse response = subscribeToTopic(tokens, topic);
+
+        // If subscription was successful, persist in database
+        if (response.getSuccessCount() > 0) {
+            // Get or create the topic
+            Topic topicEntity = topicRepository.findByTopicName(topic)
+                    .orElseGet(() -> {
+                        Topic newTopic = Topic.builder()
+                                .topicName(topic)
+                                .build();
+                        return topicRepository.save(newTopic);
+                    });
+
+            // Check if subscription already exists
+            if (!userTopicRepository.existsByUserAndTopic(user, topicEntity)) {
+                // Create and save the user-topic relationship
+                UserTopic userTopic = UserTopic.builder()
+                        .user(user)
+                        .topic(topicEntity)
+                        .build();
+                userTopicRepository.save(userTopic);
+                log.info("Persisted topic subscription for user {} to topic {}", deviceId, topic);
+            } else {
+                log.info("User {} is already subscribed to topic {}", deviceId, topic);
+            }
+        }
+
+        return response;
+    }
+
+    /**
      * Unsubscribe tokens from a topic
      *
      * @param tokens List of device tokens
@@ -239,6 +303,43 @@ public class FCMService {
             log.error("Failed to unsubscribe from topic {}: {}", topic, e.getMessage(), e);
             throw new RuntimeException("Failed to unsubscribe from FCM topic", e);
         }
+    }
+
+    /**
+     * Unsubscribe a user from a topic and remove the subscription from the database
+     *
+     * @param deviceId User's device ID
+     * @param topic    Topic name
+     * @return TopicManagementResponse
+     */
+    @Transactional
+    public TopicManagementResponse unsubscribeUserFromTopic(UUID deviceId, String topic) {
+        // Find the user
+        User user = userRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with deviceId: " + deviceId));
+
+        // Check if user has FCM token
+        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
+            throw new IllegalArgumentException("User does not have an FCM token registered");
+        }
+
+        // Unsubscribe from FCM topic
+        List<String> tokens = List.of(user.getFcmToken());
+        TopicManagementResponse response = unsubscribeFromTopic(tokens, topic);
+
+        // If unsubscription was successful, remove from database
+        if (response.getSuccessCount() > 0) {
+            // Find the topic
+            topicRepository.findByTopicName(topic).ifPresent(topicEntity -> {
+                // Find and delete the user-topic relationship
+                userTopicRepository.findByUserAndTopic(user, topicEntity).ifPresent(userTopic -> {
+                    userTopicRepository.delete(userTopic);
+                    log.info("Removed topic subscription for user {} from topic {}", deviceId, topic);
+                });
+            });
+        }
+
+        return response;
     }
 
     /**

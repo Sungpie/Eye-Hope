@@ -17,6 +17,7 @@ public class UserResponseDto {
     private String name;
     private String email;
     private String nickname;
+    private String fcmToken;
 
     public static UserResponseDto fromEntity(User user) {
         return UserResponseDto.builder()
@@ -24,6 +25,7 @@ public class UserResponseDto {
                 .name(user.getName())
                 .email(user.getEmail())
                 .nickname(user.getNickname())
+                .fcmToken(user.getFcmToken())
                 .build();
     }
 }

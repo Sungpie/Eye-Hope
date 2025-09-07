@@ -32,4 +32,7 @@ public class User {
 
     @Column(name = "password_hash")
     private String passwordHash;
+
+    @Column(name = "fcm_token")
+    private String fcmToken;
 }
