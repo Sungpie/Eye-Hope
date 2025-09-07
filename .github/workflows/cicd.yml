@@ -72,7 +72,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          script:
+          script: |
             # 변수 설정
             APP_NAME="Eye-Hope" # 배포할 JAR 파일의 고정된 이름
             JAR_SOURCE_NAME="${{ env.jar_path }}" # Runner에서 복사해온 원본 JAR 파일 이름
