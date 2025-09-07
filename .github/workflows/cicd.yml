@@ -99,10 +99,16 @@ jobs:
             echo "Deploying new application..."
             mv "/home/${{ secrets.EC2_USERNAME }}/${JAR_SOURCE_NAME}" "$JAR_DEST_PATH"
             
+            # GitHub Secrets로부터 받은 환경 변수 설정
+            export DB_URL=${{ secrets.DB_URL }}
+            export DB_USERNAME=${{ secrets.DB_USERNAME }}
+            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            export GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            
             # 새 애플리케이션 실행
             echo "Starting new application with memory options..."
             cd $DEPLOY_DIR
             nohup java -jar -Xms512m -Xmx512m $JAR_DEST_PATH &
             
             echo "Deployment successful!"
-
+            
