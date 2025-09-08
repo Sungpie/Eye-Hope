@@ -108,7 +108,7 @@ jobs:
             # 새 애플리케이션 실행
             echo "Starting new application with memory options..."
             cd $DEPLOY_DIR
-            nohup java -jar -Xms512m -Xmx512m $JAR_DEST_PATH &
+            nohup java -jar -Xms512m -Xmx512m $JAR_DEST_PATH > /dev/null 2>&1 &
             
             echo "Deployment successful!"
             
