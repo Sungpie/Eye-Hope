@@ -8,14 +8,11 @@ import com.newsapp.eyehope.api.dto.UserUpdateDto;
 import com.newsapp.eyehope.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.UUID;
@@ -26,6 +23,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserResponseDto registerUser(UserRequestDto requestDto) {
@@ -67,7 +65,7 @@ public class UserService {
         // 비밀번호 해싱 (비밀번호가 있는 경우에만)
         String hashedPassword = null;
         if (requestDto.getPassword() != null) {
-            hashedPassword = hashPassword(requestDto.getPassword());
+            hashedPassword = passwordEncoder.encode(requestDto.getPassword());
         }
 
         // 사용자 엔티티 생성 및 저장
@@ -79,19 +77,6 @@ public class UserService {
         return UserResponseDto.fromEntity(savedUser);
     }
 
-    /**
-     * 비밀번호를 SHA-256으로 해싱
-     */
-    private String hashPassword(String password) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            byte[] hash = digest.digest(password.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (NoSuchAlgorithmException e) {
-            log.error("비밀번호 해싱 오류", e);
-            throw new RuntimeException("비밀번호 해싱 중 오류가 발생했습니다.", e);
-        }
-    }
 
     /**
      * 디바이스 ID로 사용자 정보 조회
@@ -185,17 +170,36 @@ public class UserService {
                 .orElseThrow(() -> new NoSuchElementException("해당 디바이스 ID로 등록된 사용자가 없습니다: " + passwordChangeDto.getDeviceId()));
 
         // 현재 비밀번호 확인
-        String currentPasswordHash = hashPassword(passwordChangeDto.getCurrentPassword());
-        if (!Objects.equals(currentPasswordHash, user.getPasswordHash())) {
+        if (!passwordEncoder.matches(passwordChangeDto.getCurrentPassword(), user.getPasswordHash())) {
             throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
         }
 
         // 새 비밀번호 해싱 및 저장
-        String newPasswordHash = hashPassword(passwordChangeDto.getNewPassword());
+        String newPasswordHash = passwordEncoder.encode(passwordChangeDto.getNewPassword());
         user.setPasswordHash(newPasswordHash);
 
         User updatedUser = userRepository.save(user);
         log.info("비밀번호 변경 완료: {}", updatedUser.getEmail());
+
+        return UserResponseDto.fromEntity(updatedUser);
+    }
+
+    /**
+     * 사용자에게 관리자 권한 부여
+     */
+    @Transactional
+    public UserResponseDto setAdminStatus(UUID deviceId, boolean isAdmin) {
+        User user = userRepository.findByDeviceId(deviceId)
+                .orElseThrow(() -> new NoSuchElementException("해당 디바이스 ID로 등록된 사용자가 없습니다: " + deviceId));
+
+        user.setAdmin(isAdmin);
+        User updatedUser = userRepository.save(user);
+
+        if (isAdmin) {
+            log.info("사용자({})에게 관리자 권한이 부여되었습니다.", deviceId);
+        } else {
+            log.info("사용자({})의 관리자 권한이 해제되었습니다.", deviceId);
+        }
 
         return UserResponseDto.fromEntity(updatedUser);
     }

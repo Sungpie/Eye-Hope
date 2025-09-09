@@ -7,6 +7,7 @@ import com.newsapp.eyehope.api.dto.PasswordChangeDto;
 import com.newsapp.eyehope.api.dto.UserRequestDto;
 import com.newsapp.eyehope.api.dto.UserResponseDto;
 import com.newsapp.eyehope.api.dto.UserUpdateDto;
+import com.newsapp.eyehope.api.service.AdminAuthorizationService;
 import com.newsapp.eyehope.api.service.FCMService;
 import com.newsapp.eyehope.api.service.NotificationScheduleService;
 import com.newsapp.eyehope.api.service.UserService;
@@ -30,6 +31,7 @@ public class UserController {
     private final UserService userService;
     private final NotificationScheduleService notificationScheduleService;
     private final FCMService fcmService;
+    private final AdminAuthorizationService adminAuthorizationService;
 
     /**
      * 사용자 등록
@@ -51,16 +53,29 @@ public class UserController {
     }
 
     /**
-     * 사용자 정보 조회
+     * 사용자 정보 조회 (관리자 전용)
      */
     @io.swagger.v3.oas.annotations.Operation(
-            summary = "사용자 정보 조회",
-            description = "디바이스ID를 통해 사용자 정보를 조회합니다."
+            summary = "사용자 정보 조회 (관리자 전용)",
+            description = "디바이스ID를 통해 사용자 정보를 조회합니다. 관리자 권한이 필요합니다."
     )
+    @io.swagger.v3.oas.annotations.Parameters({
+        @io.swagger.v3.oas.annotations.Parameter(
+            name = "X-Device-ID",
+            description = "요청자의 디바이스 ID (UUID 형식)",
+            required = true,
+            in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER)
+    })
     @GetMapping("/{deviceId}")
-    public ResponseEntity<ApiResponse<UserResponseDto>> getUserInfo(@PathVariable UUID deviceId) {
+    public ResponseEntity<ApiResponse<UserResponseDto>> getUserInfo(
+            @RequestHeader("X-Device-ID") UUID requesterId,
+            @PathVariable UUID deviceId) {
         try {
-            log.info("사용자 정보 조회 요청: {}", deviceId);
+            log.info("사용자 정보 조회 요청: 요청자={}, 대상={}", requesterId, deviceId);
+
+            // 관리자 권한 확인
+            adminAuthorizationService.verifyAdminAccess(requesterId);
+
             UserResponseDto responseDto = userService.getUserByDeviceId(deviceId);
             return ResponseEntity.ok(ApiResponse.success("사용자 정보 조회가 완료되었습니다.", responseDto));
         } catch (NoSuchElementException e) {
@@ -93,35 +108,67 @@ public class UserController {
     }
 
     /**
-     * Get notification schedules for a device
+     * Get notification schedules for a device (관리자 전용)
      * 
-     * @param deviceId the device ID
+     * @param requesterId the requester's device ID
+     * @param deviceId the target device ID
      * @return the response entity containing the notification schedules
      */
     @io.swagger.v3.oas.annotations.Operation(
-            summary = "사용자 알림 시간 조회",
-            description = "사용자별 알림 시간을 조회합니다."
+            summary = "사용자 알림 시간 조회 (관리자 전용)",
+            description = "사용자별 알림 시간을 조회합니다. 관리자 권한이 필요합니다."
     )
+    @io.swagger.v3.oas.annotations.Parameters({
+        @io.swagger.v3.oas.annotations.Parameter(
+            name = "X-Device-ID",
+            description = "요청자의 디바이스 ID (UUID 형식)",
+            required = true,
+            in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER)
+    })
     @GetMapping("/schedules/{deviceId}")
     public ResponseEntity<ApiResponse<NotificationScheduleResponseDto>> getNotificationSchedules(
+            @RequestHeader("X-Device-ID") UUID requesterId,
             @PathVariable UUID deviceId) {
-        NotificationScheduleResponseDto responseDto = notificationScheduleService.getNotificationSchedules(deviceId);
-        return ResponseEntity.ok(ApiResponse.success("Notification schedules retrieved successfully", responseDto));
+        try {
+            log.info("사용자 알림 시간 조회 요청: 요청자={}, 대상={}", requesterId, deviceId);
+
+            // 관리자 권한 확인
+            adminAuthorizationService.verifyAdminAccess(requesterId);
+
+            NotificationScheduleResponseDto responseDto = notificationScheduleService.getNotificationSchedules(deviceId);
+            return ResponseEntity.ok(ApiResponse.success("Notification schedules retrieved successfully", responseDto));
+        } catch (Exception e) {
+            log.error("사용자 알림 시간 조회 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("사용자 알림 시간 조회 중 오류가 발생했습니다."));
+        }
     }
 
     /**
-     * 사용자 정보 전체 업데이트 (PUT)
+     * 사용자 정보 전체 업데이트 (PUT) (관리자 전용)
      */
     @io.swagger.v3.oas.annotations.Operation(
-            summary = "사용자 정보 전체 업데이트",
-            description = "사용자의 이름, 이메일, 별명 정보를 모두 업데이트합니다. FCM 토큰은 선택적으로 업데이트할 수 있습니다."
+            summary = "사용자 정보 전체 업데이트 (관리자 전용)",
+            description = "사용자의 이름, 이메일, 별명 정보를 모두 업데이트합니다. FCM 토큰은 선택적으로 업데이트할 수 있습니다. 관리자 권한이 필요합니다."
     )
+    @io.swagger.v3.oas.annotations.Parameters({
+        @io.swagger.v3.oas.annotations.Parameter(
+            name = "X-Device-ID",
+            description = "요청자의 디바이스 ID (UUID 형식)",
+            required = true,
+            in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER)
+    })
     @PutMapping("/{deviceId}")
     public ResponseEntity<ApiResponse<UserResponseDto>> updateUser(
+            @RequestHeader("X-Device-ID") UUID requesterId,
             @PathVariable UUID deviceId,
             @RequestBody UserUpdateDto updateDto) {
         try {
-            log.info("사용자 정보 전체 업데이트 요청: {}", deviceId);
+            log.info("사용자 정보 전체 업데이트 요청: 요청자={}, 대상={}", requesterId, deviceId);
+
+            // 관리자 권한 확인
+            adminAuthorizationService.verifyAdminAccess(requesterId);
+
             UserResponseDto responseDto = userService.updateUser(deviceId, updateDto);
             return ResponseEntity.ok(ApiResponse.success("사용자 정보가 업데이트되었습니다.", responseDto));
         } catch (NoSuchElementException e) {
@@ -140,18 +187,30 @@ public class UserController {
     }
 
     /**
-     * 사용자 정보 부분 업데이트 (PATCH)
+     * 사용자 정보 부분 업데이트 (PATCH) (관리자 전용)
      */
     @io.swagger.v3.oas.annotations.Operation(
-            summary = "사용자 정보 부분 업데이트",
-            description = "사용자의 이름, 이메일, 별명, FCM_토큰 정보 중 일부만 업데이트합니다."
+            summary = "사용자 정보 부분 업데이트 (관리자 전용)",
+            description = "사용자의 이름, 이메일, 별명, FCM_토큰 정보 중 일부만 업데이트합니다. 관리자 권한이 필요합니다."
     )
+    @io.swagger.v3.oas.annotations.Parameters({
+        @io.swagger.v3.oas.annotations.Parameter(
+            name = "X-Device-ID",
+            description = "요청자의 디바이스 ID (UUID 형식)",
+            required = true,
+            in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER)
+    })
     @PatchMapping("/{deviceId}")
     public ResponseEntity<ApiResponse<UserResponseDto>> partialUpdateUser(
+            @RequestHeader("X-Device-ID") UUID requesterId,
             @PathVariable UUID deviceId,
             @RequestBody UserUpdateDto updateDto) {
         try {
-            log.info("사용자 정보 부분 업데이트 요청: {}", deviceId);
+            log.info("사용자 정보 부분 업데이트 요청: 요청자={}, 대상={}", requesterId, deviceId);
+
+            // 관리자 권한 확인
+            adminAuthorizationService.verifyAdminAccess(requesterId);
+
             UserResponseDto responseDto = userService.updateUser(deviceId, updateDto);
             return ResponseEntity.ok(ApiResponse.success("사용자 정보가 업데이트되었습니다.", responseDto));
         } catch (NoSuchElementException e) {

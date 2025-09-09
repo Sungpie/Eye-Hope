@@ -1,14 +1,11 @@
 package com.newsapp.eyehope.api.dto;
 
 import com.newsapp.eyehope.api.domain.Posts;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-import lombok.AllArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
+@ToString
 @Getter
 @Setter
 @NoArgsConstructor

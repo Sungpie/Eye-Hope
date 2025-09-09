@@ -3,6 +3,7 @@ package com.newsapp.eyehope.api.controller;
 
 import com.newsapp.eyehope.api.dto.ApiResponse;
 import com.newsapp.eyehope.api.dto.PostsResponseDto;
+import com.newsapp.eyehope.api.service.AdminAuthorizationService;
 import com.newsapp.eyehope.api.service.NewsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -20,6 +22,7 @@ import java.util.Map;
 public class NewsController {
 
     private final NewsService newsService;
+    private final AdminAuthorizationService adminAuthorizationService;
 
     /**
      * 모든 뉴스 조회
@@ -108,15 +111,27 @@ public class NewsController {
     }
 
     /**
-     * 뉴스 수집 트리거
+     * 뉴스 수집 트리거 (관리자 전용)
      */
     @io.swagger.v3.oas.annotations.Operation(
-        summary = "뉴스 수집 트리거",
-        description = "뉴스 수집 프로세스를 수동으로 트리거합니다."
+        summary = "뉴스 수집 트리거 (관리자 전용)",
+        description = "뉴스 수집 프로세스를 수동으로 트리거합니다. 관리자 권한이 필요합니다."
     )
+    @io.swagger.v3.oas.annotations.Parameters({
+        @io.swagger.v3.oas.annotations.Parameter(
+            name = "X-Device-ID",
+            description = "사용자 디바이스 ID (UUID 형식)",
+            required = true,
+            in = io.swagger.v3.oas.annotations.enums.ParameterIn.HEADER)
+    })
     @PostMapping("/collect")
-    public ResponseEntity<ApiResponse<String>> collectNews() {
-        log.info("뉴스 수집 요청");
+    public ResponseEntity<ApiResponse<String>> collectNews(
+            @RequestHeader("X-Device-ID") UUID deviceId) {
+        log.info("뉴스 수집 요청, deviceId={}", deviceId);
+
+        // 관리자 권한 확인
+        adminAuthorizationService.verifyAdminAccess(deviceId);
+
         String result = newsService.collectNews();
         return ResponseEntity.ok(ApiResponse.success("뉴스 수집 결과", result));
     }

@@ -18,6 +18,7 @@ public class UserResponseDto {
     private String email;
     private String nickname;
     private String fcmToken;
+    private boolean isAdmin;
 
     public static UserResponseDto fromEntity(User user) {
         return UserResponseDto.builder()
@@ -26,6 +27,7 @@ public class UserResponseDto {
                 .email(user.getEmail())
                 .nickname(user.getNickname())
                 .fcmToken(user.getFcmToken())
+                .isAdmin(user.isAdmin())
                 .build();
     }
 }

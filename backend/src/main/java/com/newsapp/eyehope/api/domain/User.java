@@ -35,4 +35,11 @@ public class User {
 
     @Column(name = "fcm_token")
     private String fcmToken;
+
+    @Column(name = "is_admin")
+    private boolean isAdmin = false;
+
+    public void setAdmin(Boolean isAdmin) {
+        this.isAdmin = isAdmin != null ? isAdmin : false;
+    }
 }
