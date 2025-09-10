@@ -28,25 +28,50 @@ spring:
           time_zone: Asia/Seoul
         type:
           preferred_instant_jdbc_type: TIMESTAMP_WITH_TIMEZONE
+  # 프로필 설정 (기본값은 dev)
+  profiles:
+    active: dev
+
 # Gemini API Configuration
 gemini:
   api:
     key: ${GEMINI_API_KEY}
     model: gemini-2.5-flash-lite
+
+# 공통 Swagger 설정
 springdoc:
   swagger-ui:
-    # Swagger UI에 접속할 경로를 설정합니다.
-    # 예시: http://localhost:8080/swagger-ui.html -> http://localhost:8080/swagger-ui.html
     path: /swagger-ui.html
-    # Swagger UI 활성화/비활성화
+  api-docs:
+    path: /v3/api-docs
+
+---
+# 개발 환경 설정
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+# 개발 환경에서는 Swagger UI 활성화
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
     enabled: true
 
+---
+# 배포 환경 설정
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+# 배포 환경에서는 Swagger UI 비활성화
+springdoc:
+  swagger-ui:
+    enabled: false
   api-docs:
-    # OpenAPI 3.0 문서를 제공하는 경로를 설정합니다. (JSON/YAML)
-    # 예시: http://localhost:8080/v3/api-docs -> http://localhost:8080/v3/api-docs
-    path: /v3/api-docs
-    # API 문서 활성화/비활성화
-    enabled: true
+    enabled: false
 
 logging:
   file:

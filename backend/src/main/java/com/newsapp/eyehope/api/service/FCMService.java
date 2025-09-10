@@ -2,31 +2,21 @@ package com.newsapp.eyehope.api.service;
 
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.messaging.*;
-import com.newsapp.eyehope.api.domain.Topic;
-import com.newsapp.eyehope.api.domain.User;
-import com.newsapp.eyehope.api.domain.UserTopic;
-import com.newsapp.eyehope.api.repository.TopicRepository;
-import com.newsapp.eyehope.api.repository.UserRepository;
-import com.newsapp.eyehope.api.repository.UserTopicRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class FCMService {
 
-    private final UserRepository userRepository;
-    private final TopicRepository topicRepository;
-    private final UserTopicRepository userTopicRepository;
+    // In-memory storage for device tokens by device ID
+    private final Map<UUID, String> deviceTokens = new ConcurrentHashMap<>();
+
+    // In-memory storage for topic subscriptions by device ID
+    private final Map<UUID, Set<String>> topicSubscriptions = new ConcurrentHashMap<>();
 
     /**
      * Check if Firebase is initialized
@@ -243,90 +233,58 @@ public class FCMService {
     }
 
     /**
-     * Subscribe a user to a topic and persist the subscription in the database
+     * Register a device token for a device ID
+     * 
+     * @param deviceId Device ID
+     * @param token FCM token
+     */
+    public void registerDeviceToken(UUID deviceId, String token) {
+        if (deviceId == null) {
+            throw new IllegalArgumentException("Device ID cannot be null");
+        }
+        if (token == null || token.trim().isEmpty()) {
+            throw new IllegalArgumentException("Token cannot be null or empty");
+        }
+
+        deviceTokens.put(deviceId, token);
+        log.info("Registered FCM token for device ID: {}", deviceId);
+    }
+
+    /**
+     * Get the FCM token for a device ID
+     * 
+     * @param deviceId Device ID
+     * @return FCM token or null if not found
+     */
+    public String getDeviceToken(UUID deviceId) {
+        return deviceTokens.get(deviceId);
+    }
+
+    /**
+     * Subscribe a user to a topic and store the subscription in memory
      *
      * @param deviceId User's device ID
      * @param topic    Topic name
      * @return TopicManagementResponse
      */
-    @Transactional
     public TopicManagementResponse subscribeUserToTopic(UUID deviceId, String topic) {
-        // Check if Firebase is initialized
-        if (!isFirebaseInitialized()) {
-            log.warn("Skipping user subscription to topic {} because Firebase is not initialized", topic);
+        // Check if device ID is registered
+        String token = deviceTokens.get(deviceId);
+        if (token == null) {
+            throw new IllegalArgumentException("Device ID not registered: " + deviceId);
+        }
 
-            // Even if Firebase is not available, we can still create the database relationship
-            // Find the user
-            User user = userRepository.findByDeviceId(deviceId)
-                    .orElseThrow(() -> new IllegalArgumentException("User not found with deviceId: " + deviceId));
+        // Store subscription in memory
+        topicSubscriptions.computeIfAbsent(deviceId, k -> new HashSet<>()).add(topic);
+        log.info("Stored topic subscription for device {} to topic {}", deviceId, topic);
 
-            // Get or create the topic
-            Topic topicEntity = topicRepository.findByTopicName(topic)
-                    .orElseGet(() -> {
-                        Topic newTopic = Topic.builder()
-                                .topicName(topic)
-                                .build();
-                        return topicRepository.save(newTopic);
-                    });
-
-            // Check if subscription already exists
-            if (!userTopicRepository.existsByUserAndTopic(user, topicEntity)) {
-                // Create and save the user-topic relationship
-                UserTopic userTopic = UserTopic.builder()
-                        .user(user)
-                        .topic(topicEntity)
-                        .build();
-                userTopicRepository.save(userTopic);
-                log.info("Persisted topic subscription for user {} to topic {} (Firebase unavailable)", deviceId, topic);
-            }
-
+        // Subscribe to FCM topic if Firebase is initialized
+        if (isFirebaseInitialized()) {
+            return subscribeToTopic(List.of(token), topic);
+        } else {
+            log.warn("Firebase not initialized, subscription stored in memory only");
             return null;
         }
-
-        // Find the user
-        User user = userRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with deviceId: " + deviceId));
-
-        // Check if user has FCM token
-        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
-            throw new IllegalArgumentException("User does not have an FCM token registered");
-        }
-
-        // Subscribe to FCM topic
-        List<String> tokens = List.of(user.getFcmToken());
-        TopicManagementResponse response = subscribeToTopic(tokens, topic);
-
-        // If Firebase is not initialized, response will be null
-        if (response == null) {
-            return null;
-        }
-
-        // If subscription was successful, persist in database
-        if (response.getSuccessCount() > 0) {
-            // Get or create the topic
-            Topic topicEntity = topicRepository.findByTopicName(topic)
-                    .orElseGet(() -> {
-                        Topic newTopic = Topic.builder()
-                                .topicName(topic)
-                                .build();
-                        return topicRepository.save(newTopic);
-                    });
-
-            // Check if subscription already exists
-            if (!userTopicRepository.existsByUserAndTopic(user, topicEntity)) {
-                // Create and save the user-topic relationship
-                UserTopic userTopic = UserTopic.builder()
-                        .user(user)
-                        .topic(topicEntity)
-                        .build();
-                userTopicRepository.save(userTopic);
-                log.info("Persisted topic subscription for user {} to topic {}", deviceId, topic);
-            } else {
-                log.info("User {} is already subscribed to topic {}", deviceId, topic);
-            }
-        }
-
-        return response;
     }
 
     /**
@@ -382,40 +340,33 @@ public class FCMService {
     }
 
     /**
-     * Unsubscribe a user from a topic and remove the subscription from the database
+     * Unsubscribe a user from a topic and remove the subscription from memory
      *
      * @param deviceId User's device ID
      * @param topic    Topic name
      * @return TopicManagementResponse
      */
-    @Transactional
     public TopicManagementResponse unsubscribeUserFromTopic(UUID deviceId, String topic) {
-        // Find the user
-        User user = userRepository.findByDeviceId(deviceId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with deviceId: " + deviceId));
-
-        // Check if user has FCM token
-        if (user.getFcmToken() == null || user.getFcmToken().isEmpty()) {
-            throw new IllegalArgumentException("User does not have an FCM token registered");
+        // Check if device ID is registered
+        String token = deviceTokens.get(deviceId);
+        if (token == null) {
+            throw new IllegalArgumentException("Device ID not registered: " + deviceId);
         }
 
-        // Unsubscribe from FCM topic
-        List<String> tokens = List.of(user.getFcmToken());
-        TopicManagementResponse response = unsubscribeFromTopic(tokens, topic);
-
-        // If unsubscription was successful, remove from database
-        if (response.getSuccessCount() > 0) {
-            // Find the topic
-            topicRepository.findByTopicName(topic).ifPresent(topicEntity -> {
-                // Find and delete the user-topic relationship
-                userTopicRepository.findByUserAndTopic(user, topicEntity).ifPresent(userTopic -> {
-                    userTopicRepository.delete(userTopic);
-                    log.info("Removed topic subscription for user {} from topic {}", deviceId, topic);
-                });
-            });
+        // Remove subscription from memory
+        Set<String> topics = topicSubscriptions.get(deviceId);
+        if (topics != null) {
+            topics.remove(topic);
+            log.info("Removed topic subscription for device {} from topic {}", deviceId, topic);
         }
 
-        return response;
+        // Unsubscribe from FCM topic if Firebase is initialized
+        if (isFirebaseInitialized()) {
+            return unsubscribeFromTopic(List.of(token), topic);
+        } else {
+            log.warn("Firebase not initialized, subscription removed from memory only");
+            return null;
+        }
     }
 
     /**

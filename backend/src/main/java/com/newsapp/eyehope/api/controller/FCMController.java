@@ -2,11 +2,9 @@ package com.newsapp.eyehope.api.controller;
 
 import com.google.firebase.messaging.BatchResponse;
 import com.google.firebase.messaging.TopicManagementResponse;
-import com.newsapp.eyehope.api.domain.User;
 import com.newsapp.eyehope.api.dto.ApiResponse;
 import com.newsapp.eyehope.api.dto.FCMNotificationRequestDto;
 import com.newsapp.eyehope.api.dto.FCMTopicRequestDto;
-import com.newsapp.eyehope.api.repository.UserRepository;
 import com.newsapp.eyehope.api.service.FCMService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,7 +25,6 @@ import java.util.NoSuchElementException;
 public class FCMController {
 
     private final FCMService fcmService;
-    private final UserRepository userRepository;
 
     @PostMapping("/send")
     @Operation(summary = "Send FCM notification", description = "단일 기기, 여러 기기 또는 특정 주제(토픽)에 알림을 보냅니다.")
