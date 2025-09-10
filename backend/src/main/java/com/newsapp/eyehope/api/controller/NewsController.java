@@ -4,6 +4,8 @@ package com.newsapp.eyehope.api.controller;
 import com.newsapp.eyehope.api.dto.ApiResponse;
 import com.newsapp.eyehope.api.dto.PostsResponseDto;
 import com.newsapp.eyehope.api.service.NewsService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Timer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,9 @@ import java.util.Map;
 public class NewsController {
 
     private final NewsService newsService;
+    private final Counter apiRequestCounter;
+    private final Counter newsFetchCounter;
+    private final Timer newsFetchTimer;
 
     /**
      * 모든 뉴스 조회
@@ -31,6 +36,7 @@ public class NewsController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<PostsResponseDto>>> getAllNews() {
         log.info("모든 뉴스 조회 요청");
+        apiRequestCounter.increment();
         List<PostsResponseDto> news = newsService.getAllNews();
         return ResponseEntity.ok(ApiResponse.success(news));
     }
@@ -47,6 +53,7 @@ public class NewsController {
             @io.swagger.v3.oas.annotations.Parameter(description = "조회할 뉴스 개수", example = "10")
             @RequestParam(defaultValue = "10") int limit) {
         log.info("최신 뉴스 조회 요청, limit={}", limit);
+        apiRequestCounter.increment();
         List<PostsResponseDto> news = newsService.getLatestNews(limit);
         return ResponseEntity.ok(ApiResponse.success("최신 뉴스 조회 성공", news));
     }
@@ -67,6 +74,7 @@ public class NewsController {
             @io.swagger.v3.oas.annotations.Parameter(description = "페이지 크기", example = "10")
             @RequestParam(defaultValue = "10") int size) {
         log.info("카테고리별 뉴스 조회 요청, category={}, page={}, size={}", category, page, size);
+        apiRequestCounter.increment();
         List<PostsResponseDto> news = newsService.getNewsByCategory(category, page, size);
         return ResponseEntity.ok(ApiResponse.success(category + " 카테고리 뉴스 조회 성공", news));
     }
@@ -87,6 +95,7 @@ public class NewsController {
             @io.swagger.v3.oas.annotations.Parameter(description = "페이지 크기", example = "10")
             @RequestParam(defaultValue = "10") int size) {
         log.info("뉴스 검색 요청, keyword={}, page={}, size={}", keyword, page, size);
+        apiRequestCounter.increment();
         List<PostsResponseDto> news = newsService.searchNews(keyword, page, size);
         return ResponseEntity.ok(ApiResponse.success("'" + keyword + "' 검색 결과", news));
     }
@@ -103,6 +112,7 @@ public class NewsController {
             @io.swagger.v3.oas.annotations.Parameter(description = "뉴스 ID", example = "1")
             @PathVariable Long id) {
         log.info("뉴스 상세 조회 요청, id={}", id);
+        apiRequestCounter.increment();
         PostsResponseDto news = newsService.getNewsDetail(id);
         return ResponseEntity.ok(ApiResponse.success("뉴스 상세 조회 성공", news));
     }
@@ -117,7 +127,12 @@ public class NewsController {
     @PostMapping("/collect")
     public ResponseEntity<ApiResponse<String>> collectNews() {
         log.info("뉴스 수집 요청");
-        String result = newsService.collectNews();
-        return ResponseEntity.ok(ApiResponse.success("뉴스 수집 결과", result));
+        apiRequestCounter.increment();
+
+        return newsFetchTimer.record(() -> {
+            String result = newsService.collectNews();
+            newsFetchCounter.increment();
+            return ResponseEntity.ok(ApiResponse.success("뉴스 수집 결과", result));
+        });
     }
 }

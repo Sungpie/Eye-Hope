@@ -18,11 +18,11 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: update # 개발 환경에서는 update, 운영 환경에서는 validate로 변경 필요
+    show-sql: true # 개발 환경에서만 true, 운영 환경에서는 false로 변경 필요
     properties:
       hibernate:
-        format_sql: true
+        format_sql: true # 개발 환경에서만 true, 운영 환경에서는 false로 변경 필요
         physical_naming_strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
         jdbc:
           time_zone: Asia/Seoul
@@ -45,6 +45,21 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+# Actuator 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,loggers,env,mappings,custom
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+
 ---
 # 개발 환경 설정
 spring:
@@ -65,6 +80,17 @@ spring:
   config:
     activate:
       on-profile: prod
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 운영 환경에서는 validate 사용
+    show-sql: false       # 운영 환경에서는 SQL 로깅 비활성화
+    properties:
+      hibernate:
+        format_sql: false # 운영 환경에서는 SQL 포맷팅 비활성화
+  datasource:
+    hikari:
+      maximum-pool-size: 30  # 운영 환경에서 더 많은 커넥션 허용
+      minimum-idle: 10       # 운영 환경에서 더 많은 유휴 커넥션 유지
 
 # 배포 환경에서는 Swagger UI 비활성화
 springdoc:

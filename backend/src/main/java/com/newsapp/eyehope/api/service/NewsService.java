@@ -3,12 +3,14 @@ package com.newsapp.eyehope.api.service;
 import com.newsapp.eyehope.api.domain.Posts;
 import com.newsapp.eyehope.api.dto.PostsRequestDto;
 import com.newsapp.eyehope.api.dto.PostsResponseDto;
+import com.newsapp.eyehope.api.exception.ResourceNotFoundException;
 import com.newsapp.eyehope.api.repository.PostsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -17,12 +19,14 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class NewsService {
     private final RssFeedService rssFeedService;
     private final PostsRepository postsRepository;
     private final GeminiService geminiService;
 
     // 전체 수집
+    @Transactional
     public void collectAllNews() {
         Map<String, List<PostsRequestDto>> feedsByCategory =
                 rssFeedService.fetchAllFeedsByCategory();
@@ -32,6 +36,7 @@ public class NewsService {
     }
 
     // 특정 카테고리만 수집
+    @Transactional
     public void collectNewsByCategory(String category) {
         List<PostsRequestDto> posts =
                 rssFeedService.fetchFeedsByCategory(category);
@@ -39,12 +44,34 @@ public class NewsService {
     }
 
     private void savePosts(List<PostsRequestDto> posts) {
+        if (posts == null || posts.isEmpty()) {
+            log.warn("저장할 뉴스가 없습니다.");
+            return;
+        }
+
+        int successCount = 0;
+        int skipCount = 0;
+        int errorCount = 0;
+
         for (PostsRequestDto dto : posts) {
-            if (!postsRepository.existsByUrl(dto.getUrl())) {
+            try {
+                // URL이 null이거나 비어있는지 확인
+                if (dto.getUrl() == null || dto.getUrl().trim().isEmpty()) {
+                    log.warn("URL이 없는 뉴스는 건너뜁니다: {}", dto.getTitle());
+                    continue;
+                }
+
+                // 이미 존재하는 URL인지 확인
+                if (postsRepository.existsByUrl(dto.getUrl())) {
+                    skipCount++;
+                    continue;
+                }
+
                 // 뉴스 ID가 설정되어 있는지 확인
                 if (dto.getNewsId() == null) {
                     // NewsId가 없는 경우 기본값 설정 (예: 기타 카테고리)
                     dto.setNewsId(8L); // 기본값으로 오피니언 카테고리 설정
+                    log.debug("NewsId가 없는 뉴스에 기본값 설정: {}", dto.getTitle());
                 }
 
                 try {
@@ -60,12 +87,25 @@ public class NewsService {
                         log.warn("뉴스 요약 실패, 원본 내용 유지: {}", dto.getTitle());
                     }
                 } catch (Exception e) {
-                    log.error("뉴스 요약 중 오류 발생: {}", e.getMessage());
+                    log.error("뉴스 요약 중 오류 발생: {}", e.getMessage(), e);
+                    // 요약 실패해도 원본 내용으로 저장 진행
+                }
+
+                // 저장 전 필수 필드 검증
+                if (dto.getTitle() == null || dto.getTitle().trim().isEmpty()) {
+                    log.warn("제목이 없는 뉴스는 건너뜁니다: {}", dto.getUrl());
+                    continue;
                 }
 
                 postsRepository.save(dto.toEntity());
+                successCount++;
+            } catch (Exception e) {
+                log.error("뉴스 저장 중 오류 발생: {}, URL: {}", e.getMessage(), dto.getUrl(), e);
+                errorCount++;
             }
         }
+
+        log.info("뉴스 저장 결과: 성공 {}, 건너뜀 {}, 오류 {}", successCount, skipCount, errorCount);
     }
 
     /**
@@ -99,6 +139,7 @@ public class NewsService {
     /**
      * 수동으로 뉴스 수집 실행
      */
+    @Transactional
     public String collectNews() {
         collectAllNews();
         return "뉴스 수집이 완료되었습니다.";
@@ -158,7 +199,7 @@ public class NewsService {
      */
     public PostsResponseDto getNewsDetail(Long id) {
         Posts post = postsRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("해당 뉴스가 존재하지 않습니다. id=" + id));
+                .orElseThrow(() -> new ResourceNotFoundException("News", id));
         return new PostsResponseDto(post);
     }
 
