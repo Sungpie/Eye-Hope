@@ -7,11 +7,15 @@ import com.newsapp.eyehope.api.exception.ResourceNotFoundException;
 import com.newsapp.eyehope.api.repository.PostsRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -109,12 +113,67 @@ public class NewsService {
     }
 
     /**
+     * 뉴스 URL에서 본문 내용을 추출
+     * @param url 뉴스 기사 URL
+     * @return 추출된 본문 내용
+     */
+    private String extractContentFromUrl(String url) {
+        try {
+            log.info("뉴스 URL에서 본문 추출 시작: {}", url);
+
+            // URL에서 HTML 문서 가져오기
+            Document doc = Jsoup.connect(url)
+                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+                    .timeout(10000)
+                    .get();
+
+            // 일반적인 뉴스 사이트의 본문 컨텐츠를 찾기 위한 선택자들
+            // 다양한 뉴스 사이트에 대응하기 위해 여러 선택자 시도
+            Elements contentElements = doc.select("article, .article, .article-body, .article-content, .news-content, .entry-content, #article-body, .news_content, .article_content, .articleBody, .article_view, #articleBody, #newsContent");
+
+            if (!contentElements.isEmpty()) {
+                // 추출된 본문에서 불필요한 요소 제거
+                contentElements.select("script, style, iframe, .reporter, .share, .social, .related, .recommend, .copyright, .ad, .advertisement, .banner").remove();
+
+                // 본문 텍스트 추출
+                String content = contentElements.text();
+
+                // 내용이 너무 길면 적절히 자르기 (Gemini API 제한 고려)
+                if (content.length() > 15000) {
+                    content = content.substring(0, 15000);
+                }
+
+                log.info("뉴스 본문 추출 성공: {} 글자", content.length());
+                return content;
+            } else {
+                log.warn("뉴스 본문을 찾을 수 없음: {}", url);
+                return "뉴스 본문을 추출할 수 없습니다.";
+            }
+        } catch (IOException e) {
+            log.error("뉴스 URL에서 본문 추출 중 오류 발생: {}", e.getMessage(), e);
+            return "뉴스 본문 추출 중 오류 발생: " + e.getMessage();
+        } catch (Exception e) {
+            log.error("뉴스 본문 추출 중 예상치 못한 오류 발생: {}", e.getMessage(), e);
+            return "뉴스 본문 추출 중 예상치 못한 오류 발생: " + e.getMessage();
+        }
+    }
+
+    /**
      * Gemini API를 사용하여 뉴스 URL의 내용을 요약
      * @param url 뉴스 기사 URL
      * @param title 뉴스 제목
      * @return 요약된 내용
      */
     private String summarizeNewsContent(String url, String title) {
+        // URL에서 뉴스 본문 추출
+        String newsContent = extractContentFromUrl(url);
+
+        // 추출 실패 시 URL만 전달
+        if (newsContent.startsWith("뉴스 본문 추출 중 오류") || newsContent.equals("뉴스 본문을 추출할 수 없습니다.")) {
+            log.warn("본문 추출 실패로 URL만 전달: {}", url);
+            newsContent = "URL: " + url;
+        }
+
         String prompt = String.format(
             "# 역할\n" +
                     "당신은 뉴스 기사를 분석하고 핵심 내용만 간결하게 요약하는 AI 어시스턴트입니다.\n" +
@@ -124,12 +183,13 @@ public class NewsService {
                     "3.  문장은 간결하게 작성하여 TTS(Text-to-Speech) 사용자가 듣기 편하도록 만들어주세요.\n" +
                     "4.  **만약 기사 본문에 '李 대통령' 또는 '이 대통령'이라는 표현이 나올 경우에만, 이를 '이재명 대통령'으로 간주하여 요약에 반영합니다.**\n" +
                     "5.  요약문 외에 '알겠습니다', '요약:', '**' 등 어떠한 추가 텍스트도 절대 포함하지 마세요. 최종 결과는 오직 요약문이어야 합니다.\n" +
+                    "6. 주어진 내용이 너무 짧거나 유의미한 정보가 없어 요약이 불가능하다면, 혹은 본문이 URL형태로 입력되어있다면 억지로 요약문을 만들지 말고 \"본문이 없는 기사입니다.\" 라고만 답변해 주세요.\n"+
                     "# 작업\n" +
-                    "아래 '자료'에 주어진 URL과 제목의 뉴스 기사를 위의 처리 규칙에 따라 요약해주세요.\n" +
+                    "아래 '자료'에 주어진 뉴스 기사를 위의 처리 규칙에 따라 요약해주세요.\n" +
                     "# 자료\n" +
-                    "- URL: %s\n" +
-                    "- 제목: %s",
-            url, title
+                    "- 제목: %s\n" +
+                    "- 본문: %s",
+            title, newsContent
         );
 
         return geminiService.generateContent(prompt);
