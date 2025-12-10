@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 태그를 생성하고 푸시할 권한 필요!
     ## 실행 스텝 지정
     steps:
       ## 지정한 레포지터리를 확인하고 코드에 대한 작업을 실행시킴
@@ -37,3 +39,11 @@ jobs:
         with:
           name: spring-boot-jar-artifact # 아티팩트 이름
           path: backend/build/libs/*.jar
+
+      # 자동 태그 생성 및 푸시 액션
+      - name: Bump version and push tag
+        uses: anothrNick/github-tag-action@1.75.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 레포지토리 쓰기 권한
+          WITH_V: true # 태그 앞에 v를 붙여줍니다 (예: v0.0.1)
+          DEFAULT_BUMP: patch # 세 번째 자리(v0.0.x)만 올립니다.
