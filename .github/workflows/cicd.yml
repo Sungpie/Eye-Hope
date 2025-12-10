@@ -6,11 +6,15 @@ name: CI/CD with GitHub Actions
 on:
   push:
     branches: [ main ]
+    tags:
+      - "v*"  # v1.0, v0.0.1 등 태그가 Push될 때만 실행
 
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 릴리즈 생성을 위한 권한
     ## 실행 스텝 지정
     steps:
       ## 지정한 레포지터리를 확인하고 코드에 대한 작업을 실행시킴
@@ -22,93 +26,18 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: '17'
+          cache: 'gradle'
 
+      # gradlew 실행 권한 부여 (Permission denied 방지)
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-        working-directory: ./backend # 'backend' 폴더에서 실행하도록 경로 지정
 
       - name: Build with Gradle
-        run: ./gradlew clean build
-        working-directory: ./backend # 'backend' 폴더에서 빌드 실행
+        run: ./gradlew clean bootJar
 
-      ## 5. 빌드된 JAR 파일을 GitHub Actions의 artifact로 업로드
-      ## 'deploy' 작업에서 이 파일을 다운로드하여 사용합니다.
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      # 빌드된 JAR 파일을 GitHub Release로 업로드
+      - name: Create Release and Upload Jar
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') # 태그가 달려있을 때만 실행
         with:
-          name: springboot-jar
-          path: backend/build/libs/*.jar # 빌드 결과물의 정확한 경로 지정
-
-  ## CD 작업 정의
-  deploy:
-    # 'build' 작업이 성공적으로 완료되어야 이 작업이 실행됩니다.
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      # 1. 'build' 작업에서 업로드한 artifact 다운로드
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: springboot-jar
-
-      # 2. 다운로드된 JAR 파일의 이름을 변수로 저장
-      - name: Set JAR file path
-        id: set_jar_path
-        run: echo "jar_path=$(ls *.jar)" >> $GITHUB_ENV
-
-      # 3. SCP를 사용하여 EC2 인스턴스에 JAR 파일 전송
-      - name: Copy JAR to EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: ${{ env.jar_path }}
-          target: "/home/${{ secrets.EC2_USERNAME }}/" # 먼저 사용자의 홈 디렉토리로 전송
-
-      # 4. SSH를 사용하여 EC2에서 배포 스크립트 실행
-      - name: Execute deployment script on EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            # 변수 설정
-            APP_NAME="Eye-Hope"
-            JAR_SOURCE_NAME="${{ env.jar_path }}"
-            DEPLOY_DIR="/home/${{ secrets.EC2_USERNAME }}/app"
-            JAR_DEST_PATH="$DEPLOY_DIR/$APP_NAME.jar"
-            
-            # 배포 디렉토리 생성
-            mkdir -p $DEPLOY_DIR
-            
-            # 기존에 실행 중인 애플리케이션 종료
-            echo "Stopping old application..."
-            PID=$(pgrep -f "java -jar.*$APP_NAME.jar")
-            if [ -n "$PID" ]; then
-              kill -15 $PID
-              while ps -p $PID > /dev/null; do sleep 1; done
-              echo "Process $PID killed."
-            else
-              echo "No running process found."
-            fi
-            
-            # 새 JAR 파일로 교체
-            echo "Deploying new application..."
-            mv "/home/${{ secrets.EC2_USERNAME }}/${JAR_SOURCE_NAME}" "$JAR_DEST_PATH"
-            
-            # GitHub Secrets로부터 받은 환경 변수 설정
-            export DB_URL=${{ secrets.DB_URL }}
-            export DB_USERNAME=${{ secrets.DB_USERNAME }}
-            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            export GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            
-            # 새 애플리케이션 실행
-            echo "Starting new application with memory options..."
-            cd $DEPLOY_DIR
-            nohup java -jar -Xms512m -Xmx512m $JAR_DEST_PATH > /dev/null 2>&1 &
-            
-            echo "Deployment successful!"
-            
+          files: build/libs/*.jar
