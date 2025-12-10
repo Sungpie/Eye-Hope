@@ -43,3 +43,14 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') # 태그가 달려있을 때만 실행
         with:
           files: backend/build/libs/*.jar
+
+      # (Create Release and Upload Jar 스텝 바로 뒤에 추가) ...
+
+      # [추가] 배포 완료 신호 (POST Request) 보내기
+      # 업로드 단계가 성공(success)했을 때만 실행됨 -> 딜레이 문제 방지
+      - name: Trigger Termux Deployment
+        if: success() && startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "Termux 서버로 배포 신호를 보냅니다..."
+        # [중요] 아래 주소를 본인의 '공인 IP'로 변경하세요.
+          curl -X POST http://eyehope.site:5000/deploy
