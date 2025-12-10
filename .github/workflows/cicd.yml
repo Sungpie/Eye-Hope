@@ -1,5 +1,5 @@
 # 워크플로우 이름 지정
-name: CI Build And Artifact Upload
+name: CI / CD Workflow
 
 # 워크플로우가 시작될 조건 지정
 # 메인 브랜치에 Push할 때마다 워크플로우를 시작하도록
@@ -11,13 +11,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 태그를 생성하고 푸시할 권한 필요!
+      contents: write # 릴리즈 생성을 위한 권한
     ## 실행 스텝 지정
     steps:
       ## 지정한 레포지터리를 확인하고 코드에 대한 작업을 실행시킴
       - name: Checkout source code
         uses: actions/checkout@v3
-
+      # CI: JDK 설정 및 빌드 수행
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
@@ -33,17 +33,18 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean bootJar
         working-directory: ./backend # github repo에 프로젝트 파일이 바로 있다면 이 구문 생략
-      #빌드 결과물을 임시 저장소(Artifact)에 업로드합니다.
-      - name: Upload Build Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: spring-boot-jar-artifact # 아티팩트 이름
-          path: backend/build/libs/*.jar
 
-      # 자동 태그 생성 및 푸시 액션
-      - name: Bump version and push tag
-        uses: anothrNick/github-tag-action@1.75.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # 레포지토리 쓰기 권한
-          WITH_V: true # 태그 앞에 v를 붙여줍니다 (예: v0.0.1)
-          DEFAULT_BUMP: patch # 세 번째 자리(v0.0.x)만 올립니다.
+      # CD: 릴리즈 생성 및 업로드
+      - name: Create Temporary Release and Upload Jar
+        uses: softprops/action-gh-release@v1
+        with:
+      # 현재 커밋 해시(Commit SHA)를 릴리즈 이름으로 사용하여 고유성을 확보
+          tag_name: release-${{ github.sha }}
+          name: Deployment from Commit ${{ github.sha }}
+          files: backend/build/libs/*.jar
+
+      # Termux에 신호 보내기 (Post-Hook)
+      - name: Trigger Termux Deployment
+        run: |
+          echo "Termux 서버로 배포 신호를 보냅니다..."
+          curl -X POST http://eyehope.site:5000/deploy
