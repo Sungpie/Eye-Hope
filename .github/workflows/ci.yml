@@ -1,20 +1,15 @@
 # 워크플로우 이름 지정
-name: CI/CD with GitHub Actions
+name: CI Build And Artifact Upload
 
 # 워크플로우가 시작될 조건 지정
 # 메인 브랜치에 Push할 때마다 워크플로우를 시작하도록
 on:
   push:
     branches: [ main ]
-    tags:
-      - "v*"  # v1.0, v0.0.1 등 태그가 Push될 때만 실행
-
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write # 릴리즈 생성을 위한 권한
     ## 실행 스텝 지정
     steps:
       ## 지정한 레포지터리를 확인하고 코드에 대한 작업을 실행시킴
@@ -36,20 +31,9 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew clean bootJar
         working-directory: ./backend # github repo에 프로젝트 파일이 바로 있다면 이 구문 생략
-
-      # 빌드된 JAR 파일을 GitHub Release로 업로드
-      - name: Create Release and Upload Jar
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/') # 태그가 달려있을 때만 실행
+      #빌드 결과물을 임시 저장소(Artifact)에 업로드합니다.
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
         with:
-          files: backend/build/libs/*.jar
-
-      # (Create Release and Upload Jar 스텝 바로 뒤에 추가) ...
-
-      # [추가] 배포 완료 신호 (POST Request) 보내기
-      # 업로드 단계가 성공(success)했을 때만 실행됨 -> 딜레이 문제 방지
-      - name: Trigger Termux Deployment
-        if: success() && startsWith(github.ref, 'refs/tags/')
-        run: |
-          echo "Termux 서버로 배포 신호를 보냅니다..."
-          curl -X POST http://eyehope.site:5000/deploy
+          name: spring-boot-jar-artifact # 아티팩트 이름
+          path: backend/build/libs/*.jar

@@ -1,0 +1,36 @@
+name: CD Download And Deploy
+
+on:
+  push:
+    tags:
+      - "v*"
+
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v3 # 태그 정보를 사용하기 위해 체크아웃 필요
+
+      # CI 단계에서 저장한 Artifact 다운로드
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: spring-boot-jar-artifact
+          path: ./downloaded_jar # Artifact를 다운로드할 임시 경로
+
+      # GitHub Release로 업로드
+      - name: Create Release and Upload Jar
+        uses: softprops/action-gh-release@v1
+        with:
+          # 다운로드된 임시 경로에서 파일을 찾아 업로드
+          files: ./downloaded_jar/*.jar
+
+      # Termux에 신호 보내기 (Post-Hook)
+      - name: Trigger Termux Deployment
+        run: |
+          echo "Termux 서버로 배포 신호를 보냅니다..."
+          curl -X POST http://eyehope.site:5000/deploy
