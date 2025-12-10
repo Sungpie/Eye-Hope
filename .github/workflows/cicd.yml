@@ -31,13 +31,15 @@ jobs:
       # gradlew 실행 권한 부여 (Permission denied 방지)
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+        working-directory: ./backend # github repo에 프로젝트 파일이 바로 있다면 이 구문 생략
 
       - name: Build with Gradle
         run: ./gradlew clean bootJar
+        working-directory: ./backend
 
       # 빌드된 JAR 파일을 GitHub Release로 업로드
       - name: Create Release and Upload Jar
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/') # 태그가 달려있을 때만 실행
         with:
-          files: build/libs/*.jar
+          files: backend/build/libs/*.jar
