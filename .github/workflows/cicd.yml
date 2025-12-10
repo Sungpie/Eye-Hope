@@ -35,7 +35,7 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean bootJar
-        working-directory: ./backend
+        working-directory: ./backend # github repo에 프로젝트 파일이 바로 있다면 이 구문 생략
 
       # 빌드된 JAR 파일을 GitHub Release로 업로드
       - name: Create Release and Upload Jar
