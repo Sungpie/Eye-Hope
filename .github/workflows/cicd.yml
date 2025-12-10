@@ -52,5 +52,4 @@ jobs:
         if: success() && startsWith(github.ref, 'refs/tags/')
         run: |
           echo "Termux 서버로 배포 신호를 보냅니다..."
-        # [중요] 아래 주소를 본인의 '공인 IP'로 변경하세요.
           curl -X POST http://eyehope.site:5000/deploy
