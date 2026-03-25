@@ -56,9 +56,9 @@ management:
     health:
       show-details: always
     metrics:
-      enabled: true
+      access: READ_ONLY
     prometheus:
-      enabled: true
+      access: READ_ONLY
 
 ---
 # 개발 환경 설정
