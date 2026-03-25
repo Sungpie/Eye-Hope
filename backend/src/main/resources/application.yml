@@ -1,6 +1,6 @@
 spring:
   application:
-    name: News App
+    name: eye-hope
   datasource:
     url: ${DB_URL}?TimeZone=Asia/Seoul
     username: ${DB_USERNAME}
@@ -47,6 +47,9 @@ springdoc:
 
 # Actuator 설정
 management:
+  metrics:
+    tags:
+      application: ${spring.application.name}
   endpoints:
     web:
       exposure:
@@ -56,9 +59,9 @@ management:
     health:
       show-details: always
     metrics:
-      enabled: true
+      access: READ_ONLY
     prometheus:
-      enabled: true
+      access: READ_ONLY
 
 ---
 # 개발 환경 설정

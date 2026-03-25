@@ -15,7 +15,22 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
         // ApiResponse로 이미 래핑된 응답은 처리하지 않음
-        return !returnType.getParameterType().equals(ApiResponse.class);
+        if (returnType.getParameterType().equals(ApiResponse.class)) {
+            return false;
+        }
+
+        // Actuator 엔드포인트는 처리하지 않음 (byte[] 등 원본 응답 유지)
+        String packageName = returnType.getDeclaringClass().getPackageName();
+        if (packageName.startsWith("org.springframework.boot.actuate")) {
+            return false;
+        }
+
+        // byte[] 반환 타입은 처리하지 않음
+        if (returnType.getParameterType().equals(byte[].class)) {
+            return false;
+        }
+
+        return true;
     }
 
     @Override
