@@ -28,6 +28,7 @@ public class NewsService {
     private final RssFeedService rssFeedService;
     private final PostsRepository postsRepository;
     private final GeminiService geminiService;
+    private final LocalLlmService localLlmService;
 
     // 전체 수집
     @Transactional
@@ -192,7 +193,7 @@ public class NewsService {
             title, newsContent
         );
 
-        return geminiService.generateContent(prompt);
+        return localLlmService.generateContent(prompt);
     }
 
 
