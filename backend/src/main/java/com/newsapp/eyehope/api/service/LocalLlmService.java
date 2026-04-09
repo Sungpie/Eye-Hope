@@ -3,10 +3,10 @@ package com.newsapp.eyehope.api.service;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -16,12 +16,15 @@ import org.springframework.web.client.RestTemplate;
 public class LocalLlmService {
 
     private static final String LOCAL_LLM_URL = "http://127.0.0.1:8888/v1/chat/completions";
+    private static final int TIMEOUT_MS = 120_000; // 2분
 
     private final RestTemplate restTemplate;
 
-    @Autowired
-    public LocalLlmService(RestTemplate restTemplate) {
-        this.restTemplate = restTemplate;
+    public LocalLlmService() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(TIMEOUT_MS);
+        factory.setReadTimeout(TIMEOUT_MS);
+        this.restTemplate = new RestTemplate(factory);
     }
 
     /**
