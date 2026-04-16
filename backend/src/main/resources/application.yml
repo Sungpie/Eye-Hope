@@ -38,6 +38,12 @@ gemini:
     key: ${GEMINI_API_KEY}
     model: gemini-2.5-flash-lite
 
+# OpenRouter API Configuration
+openrouter:
+  api:
+    key: ${OPENROUTER_API_KEY}
+    model: openai/gpt-oss-120b:free
+
 # 공통 Swagger 설정
 springdoc:
   swagger-ui:
