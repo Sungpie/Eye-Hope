@@ -28,7 +28,7 @@ public class NewsService {
     private final RssFeedService rssFeedService;
     private final PostsRepository postsRepository;
     private final GeminiService geminiService;
-    private final LocalLlmService localLlmService;
+    private final OpenRouterService openRouterService;
 
     // 전체 수집
     @Transactional
@@ -80,7 +80,7 @@ public class NewsService {
                 }
 
                 try {
-                    // URL을 사용하여 Gemini API로 내용 요약
+                    // URL을 사용하여 OpenRouter API로 내용 요약
                     String summarizedContent = summarizeNewsContent(dto.getUrl(), dto.getTitle());
 
                     // 요약된 내용이 있으면 DTO의 content 필드 업데이트
@@ -160,7 +160,7 @@ public class NewsService {
     }
 
     /**
-     * Gemini API를 사용하여 뉴스 URL의 내용을 요약
+     * OpenRouter API를 사용하여 뉴스 URL의 내용을 요약
      * @param url 뉴스 기사 URL
      * @param title 뉴스 제목
      * @return 요약된 내용
@@ -193,7 +193,7 @@ public class NewsService {
             title, newsContent
         );
 
-        return localLlmService.generateContent(prompt);
+        return openRouterService.generateContent(prompt);
     }
 
 
