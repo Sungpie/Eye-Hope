@@ -1,0 +1,192 @@
+import { StyleSheet, Platform } from "react-native";
+
+export const categoryNewsStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F2F2F7",
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5EA",
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  title: {
+    flex: 1,
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#000000",
+    textAlign: "center",
+  },
+  placeholder: {
+    width: 40,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#8E8E93",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+    marginTop: 100,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#FF3B30",
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  errorMessage: {
+    fontSize: 16,
+    color: "#8E8E93",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  retryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#8E8E93",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: "#C7C7CC",
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  newsSection: {
+    marginTop: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#000000",
+    marginBottom: 16,
+  },
+  newsCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pressedNewsCard: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+  },
+  newsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  newsCategory: {
+    color: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    fontSize: 16,
+    fontWeight: "600",
+    // backgroundColor은 동적으로 설정됩니다
+  },
+  newsTime: {
+    fontSize: 12,
+    color: "#8E8E93",
+  },
+  newsTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  newsContent: {
+    fontSize: 14,
+    color: "#666666",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  newsFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  newsSource: {
+    fontSize: Platform.OS === "android" ? 10 : 12,
+    color: "#8E8E93",
+    fontStyle: Platform.OS === "android" ? "normal" : "italic",
+  },
+  loadMoreContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  loadMoreText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: "#8E8E93",
+  },
+  noMoreContainer: {
+    paddingVertical: 20,
+    alignItems: "center",
+  },
+  noMoreText: {
+    fontSize: 14,
+    color: "#8E8E93",
+    fontStyle: "italic",
+  },
+});
